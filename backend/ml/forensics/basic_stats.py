@@ -176,3 +176,147 @@ def gradient_stats(matrix):
     var = sum((g - mean)**2 for g in grads) / len(grads)
 
     return mean, var
+
+def ai_derivative_kernel_score(matrix):
+    """
+    DETECTOR BASADO EN DERIVADAS DE SEGUNDO ORDEN (LAPLACIANO)
+
+    1) MODELO CONTINUO DE UNA IMAGEN
+    --------------------------------
+    Una imagen en escala de grises puede modelarse como una función:
+
+        I(x, y)
+        - x = posición horizontal
+        - y = posición vertical
+        - I = intensidad
+
+    2) PRIMERA DERIVADA (CAMBIO DE INTENSIDAD)
+    La derivada parcial en x se define como:
+
+        ∂I/∂x = lim(h→0) [ I(x+h, y) - I(x, y) ] / h
+
+    usamos una aproximación discreta:
+
+        ∂I/∂x ≈ I(x+1, y) - I(x, y)
+
+    Mejor aún (más simétrica):
+
+        ∂I/∂x ≈ [ I(x+1, y) - I(x-1, y) ] / 2
+
+    Esto mide cambios de intensidad → bordes.
+
+    3) SEGUNDA DERIVADA (CAMBIO DEL CAMBIO)
+    derivamos nuevamente:
+
+        ∂²I/∂x²
+
+    Definición continua:
+
+        ∂²I/∂x² = lim(h→0) [ I(x+h) - 2I(x) + I(x-h) ] / h²
+
+    Aproximación discreta (h = 1):
+
+        ∂²I/∂x² ≈ I(x+1) - 2I(x) + I(x-1)
+
+    mide:
+        - curvatura
+        - irregularidades finas
+        - cambios abruptos en la textura
+
+    4) EXTENSIÓN A 2D (LAPLACIANO)
+    En 2D:
+
+        ∇²I = ∂²I/∂x² + ∂²I/∂y²
+
+    Sustituyendo las aproximaciones discretas:
+
+        ∇²I ≈
+            [I(x+1,y) - 2I(x,y) + I(x-1,y)] + [I(x,y+1) - 2I(x,y) + I(x,y-1)]
+
+    Reordenando:
+
+        ∇²I ≈
+            I(x+1,y) + I(x-1,y) + I(x,y+1) + I(x,y-1) - 4I(x,y)
+
+    Esto se traduce directamente al kernel:
+
+        [ 0  1  0 ]
+        [ 1 -4  1 ]
+        [ 0  1  0 ]
+
+
+    5) MODIFICACIÓN PARA DETECTAR IA
+
+    Para capturar mejor  irregularidades, extendemos el Laplaciano incluyendo diagonales:
+
+        [ -1  -1  -1 ]
+        [ -1   8  -1 ]
+        [ -1  -1  -1 ]
+
+    6) CONVOLUCIÓN
+    Aplicar el kernel significa:
+
+        R(i,j) = suma de: I vecinos * pesos del kernel
+
+    Esto aproxima el Laplaciano en cada pixel.
+
+
+    7) ENERGÍA DEL RESULTADO
+    Calculamos:
+
+        Energía = promedio de R(i,j)^2
+
+    Esto mide:
+        - cantidad de detalle de alta frecuencia
+        - irregularidad estructural
+
+
+    8) INTERPRETACIÓN FINAL
+    - Imágenes reales:
+        alta variabilidad -> energía moderada-alta
+
+    - Imágenes IA:
+        patrones artificiales -> energía atípica
+
+    """
+
+    height = len(matrix)
+    width = len(matrix[0])
+
+    # Kernel derivado matemáticamente (Laplaciano extendido)
+    kernel = [
+        [-1, -1, -1],
+        [-1,  8, -1],
+        [-1, -1, -1]
+    ]
+
+    # Matriz de salida
+    response = [[0 for _ in range(width)] for _ in range(height)]
+
+    # Convolución
+    for i in range(1, height - 1):
+        for j in range(1, width - 1):
+
+            value = 0
+
+            for ki in range(3):
+                for kj in range(3):
+                    value += (
+                        matrix[i + ki - 1][j + kj - 1] *
+                        kernel[ki][kj]
+                    )
+
+            response[i][j] = value
+
+    # Energía del resultado (R^2 promedio)
+    total = 0
+    count = 0
+
+    for row in response:
+        for value in row:
+            total += value * value
+            count += 1
+
+    energy = total / count
+
+    return energy
