@@ -49,6 +49,15 @@ class PNGReader:
         chunks["IDAT"] = idat_data
         return chunks
 
+# ESTRUCTURA DEL CHUNK IHDR 
+# Width        4 bytes
+# Height       4 bytes
+# Bit depth    1 byte
+# Color type   1 byte
+# Compression  1 byte
+# Filter       1 byte
+# Interlace    1 byte
+
     def _parse_ihdr(self, data):
         self.width = struct.unpack(">I", data[0:4])[0]
         self.height = struct.unpack(">I", data[4:8])[0]
