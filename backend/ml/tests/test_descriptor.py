@@ -11,10 +11,8 @@ from backend.ml.description.image_descriptor import ImageDescriptor
 
 def main():
     image_path = PROJECT_ROOT / "backend" / "ml" / "forensics" / "paisaje.png"
-    image_path2 = "backend/test_images/imagenes/real_and_fake_face/training_fake/mid_100_1110.png"
 
-
-    reader = PNGReader(str(image_path2))
+    reader = PNGReader(str(image_path))
     reader.read()
 
     descriptor = ImageDescriptor()

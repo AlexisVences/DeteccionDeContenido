@@ -1,17 +1,16 @@
 # backend/ml/description/scene_inference.py
 
+from backend.ml.description.scene_scoring import SceneScoringEngine
+
+
 class SceneInference:
 
-    def infer(self, semantic_features):
-        scene = []
+    def __init__(self):
+        self.scoring_engine = SceneScoringEngine()
 
-        if semantic_features["brightness"] == "brillante":
-            scene.append("posiblemente exterior")
-
-        if semantic_features["texture"] == "uniforme":
-            scene.append("escena simple")
-
-        if semantic_features["detail"] == "rica en detalles":
-            scene.append("escena compleja")
-
-        return scene
+    def infer(self, semantic_features, heuristic_features, model_predictions=None):
+        return self.scoring_engine.score(
+            semantic_features,
+            heuristic_features,
+            model_predictions=model_predictions,
+        )
