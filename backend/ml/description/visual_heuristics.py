@@ -129,9 +129,18 @@ class VisualHeuristicAnalyzer:
         block_variance,
     ):
         return {
-            "nature_like": dominant_color in ("green", "blue") or bottom_green_ratio > 0.25,
+            "nature_like": (
+                dominant_color == "green" or
+                bottom_green_ratio > 0.25 or
+                (dominant_color == "blue" and top_blue_ratio > 0.35 and edge_density < 0.18)
+            ),
             "urban_like": dominant_color == "gray" and edge_density > 0.22,
-            "coast_like": top_blue_ratio > 0.35 and dominant_color == "blue",
+            "coast_like": (
+                top_blue_ratio > 0.45 and
+                dominant_color == "blue" and
+                edge_density < 0.18 and
+                block_variance < 500000
+            ),
             "desert_like": dominant_color == "yellow" or bottom_yellow_ratio > 0.25,
             "open_scene_like": top_blue_ratio > 0.30 and edge_density < 0.20,
             "complex_scene_like": block_variance > 220 and edge_density > 0.24,

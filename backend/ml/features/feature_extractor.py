@@ -162,6 +162,66 @@ class FeatureExtractor:
         return strong_edges / total if total else 0
 
     @staticmethod
+    def _directional_edges(grayscale):
+        height = len(grayscale)
+        width = len(grayscale[0])
+        horizontal_total = 0
+        vertical_total = 0
+        samples = 0
+
+        for i in range(1, height - 1):
+            for j in range(1, width - 1):
+                gx = abs(grayscale[i][j + 1] - grayscale[i][j - 1])
+                gy = abs(grayscale[i + 1][j] - grayscale[i - 1][j])
+                horizontal_total += gx
+                vertical_total += gy
+                samples += 1
+
+        if samples == 0:
+            return {
+                "horizontal_gradient_mean": 0,
+                "vertical_gradient_mean": 0,
+                "horizontal_edge_bias": 0,
+            }
+
+        horizontal_mean = horizontal_total / samples
+        vertical_mean = vertical_total / samples
+
+        return {
+            "horizontal_gradient_mean": horizontal_mean,
+            "vertical_gradient_mean": vertical_mean,
+            "horizontal_edge_bias": horizontal_mean / (vertical_mean + 1e-6),
+        }
+
+    @staticmethod
+    def _region_brightness_features(grayscale):
+        height = len(grayscale)
+        width = len(grayscale[0])
+        center_top = height // 4
+        center_bottom = max(center_top + 1, (3 * height) // 4)
+        center_left = width // 4
+        center_right = max(center_left + 1, (3 * width) // 4)
+
+        center_region = [
+            row[center_left:center_right]
+            for row in grayscale[center_top:center_bottom]
+        ]
+        left_band = [row[:max(1, width // 5)] for row in grayscale]
+        right_band = [row[max(0, width - max(1, width // 5)):] for row in grayscale]
+
+        center_brightness = mean(center_region) if center_region else 0
+        left_brightness = mean(left_band) if left_band else 0
+        right_brightness = mean(right_band) if right_band else 0
+
+        return {
+            "center_brightness": center_brightness,
+            "side_brightness": (left_brightness + right_brightness) / 2,
+            "center_darkness_bias": (
+                ((left_brightness + right_brightness) / 2) - center_brightness
+            ),
+        }
+
+    @staticmethod
     def extract_from_png_reader(reader):
         grayscale = rgb_to_grayscale(reader.pixels, reader.width)
 
@@ -203,5 +263,7 @@ class FeatureExtractor:
             FeatureExtractor._dominant_color_features(reader.pixels, reader.height)
         )
         features.update(FeatureExtractor._spatial_brightness_features(grayscale))
+        features.update(FeatureExtractor._directional_edges(grayscale))
+        features.update(FeatureExtractor._region_brightness_features(grayscale))
 
         return features

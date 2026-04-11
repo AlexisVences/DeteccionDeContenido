@@ -10,7 +10,7 @@ from backend.ml.description.image_descriptor import ImageDescriptor
 
 
 def main():
-    image_path = PROJECT_ROOT / "backend" / "ml" / "forensics" / "paisaje.png"
+    image_path = PROJECT_ROOT / "backend" / "ml" / "forensics" / "paisaje_natural.png"
 
     reader = PNGReader(str(image_path))
     reader.read()
