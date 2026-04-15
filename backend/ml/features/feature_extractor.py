@@ -14,7 +14,12 @@ from forensics.basic_stats import (
 from forensics.block_analysis import (
     split_into_blocks,
     block_energy,
-    energy_distribution_variance
+    energy_distribution_variance,
+    block_variance_stats,
+    symmetry_score,
+    local_hf_variance,
+    gradient_direction_consistency,
+    block_entropy_variance
 )
 
 class FeatureExtractor:
@@ -39,7 +44,15 @@ class FeatureExtractor:
         spectrum = fft_2d(sub_image)
         spec_energy = spectral_energy(spectrum)
         energia_diag_2da_derivada = ai_derivative_kernel_score(grayscale)
-        energia_diag_norm = energia_diag_2da_derivada / (v + 1e-6)    
+        energia_diag_norm = energia_diag_2da_derivada / (v + 1e-6)  
+
+        blocks = split_into_blocks(grayscale, 32)
+
+        mean_var, var_var = block_variance_stats(blocks)
+        sym = symmetry_score(grayscale)
+        hf_local = local_hf_variance(blocks)
+        grad_dir = gradient_direction_consistency(grayscale)
+        ent_mean, ent_var = block_entropy_variance(blocks)  
             
         features = {
             "mean": m,
@@ -51,7 +64,14 @@ class FeatureExtractor:
             "gradiente_mean": grad_mean,
             "gradient_variance": grad_var,
             "spectral_energy": spec_energy,
-            "energia_diagonal_2da_derivada_norm": energia_diag_norm
+            "energia_diagonal_2da_derivada_norm": energia_diag_norm,
+
+            "block_variance_mean": mean_var,
+            "block_variance_var": var_var,
+            "symmetry_score": sym,
+            "local_hf_variance": hf_local,
+            "gradient_direction": grad_dir,
+            "entropy_block_var": ent_var
         }
 
         return features

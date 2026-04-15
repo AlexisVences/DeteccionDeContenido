@@ -13,7 +13,15 @@ def select_features(feature_dict):
         feature_dict["energy_to_variance_ratio"],
         feature_dict["block_energy_variance"],
         feature_dict["spectral_energy"],
-        feature_dict["energia_diagonal_2da_derivada_norm"]
+        feature_dict["energia_diagonal_2da_derivada_norm"],
+
+        # 🔥 nuevas
+        feature_dict["block_variance_mean"],
+        feature_dict["block_variance_var"],
+        feature_dict["symmetry_score"],
+        feature_dict["local_hf_variance"],
+        feature_dict["gradient_direction"],
+        feature_dict["entropy_block_var"]
     ]
 
 def process_image(args):
@@ -207,6 +215,37 @@ if __name__ == "__main__":
 
     print("Total imágenes:", len(X))
 
+    print("\nCalculando promedios por clase...")
+
+    feature_names = [
+        "energy_to_variance_ratio",
+        "block_energy_variance",
+        "spectral_energy",
+        "energia_diagonal_2da_derivada_norm",
+        "block_variance_mean",
+        "block_variance_var",
+        "symmetry_score",
+        "local_hf_variance",
+        "gradient_direction",
+        "entropy_block_var"
+    ]
+
+    averages = compute_feature_averages(X, y, feature_names)
+
+    print("\n=== PROMEDIOS ===")
+
+    for label in [0, 1]:
+        print("\nClase:", "REAL (0)" if label == 0 else "FAKE (1)")
+        
+        for i in range(len(feature_names)):
+            print(f"{feature_names[i]}: {averages[label][i]:.5f}")
+
+    print("\n=== DIFERENCIA ENTRE CLASES ===")
+
+    for i in range(len(feature_names)):
+        diff = abs(averages[0][i] - averages[1][i])
+        print(f"{feature_names[i]:40} {diff:.5f}")
+
     print("Dividiendo train/test...")
     X_train, X_test, y_train, y_test = train_test_split(X, y)
 
@@ -219,7 +258,7 @@ if __name__ == "__main__":
 
     print("Entrenando KNN...")
 
-    model = KNN(k=3)
+    model = KNN(k=5)
 
     model.fit(X_train, y_train)
 
