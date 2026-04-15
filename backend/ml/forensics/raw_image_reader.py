@@ -64,14 +64,15 @@ class PNGReader:
         self.bit_depth = data[8]
         self.color_type = data[9]
 
-        if self.color_type != 2:
-            raise NotImplementedError("Only RGB PNG supported")
+        # Solo aceptar RGB y RGBA
+        if self.color_type not in (2, 6):
+            raise ValueError(f"Unsupported PNG color type: {self.color_type}")
 
     def _decompress_idat(self, data):
         return zlib.decompress(data)
     
     def _reconstruct_pixels(self, raw_data):
-        bytes_per_pixel = 3
+        bytes_per_pixel = 4 if self.color_type == 6 else 3
         stride = self.width * bytes_per_pixel
 
         pixels = []
@@ -131,7 +132,19 @@ class PNGReader:
             else:
                 raise ValueError(f"Unknown filter type: {filter_type}")
 
-            pixels.append(reconstructed)
+            # Convertir a RGB si es RGBA
+            if self.color_type == 6:
+                rgb_row = []
+                for i in range(0, len(reconstructed), 4):
+                    r = reconstructed[i]
+                    g = reconstructed[i + 1]
+                    b = reconstructed[i + 2]
+                    # ignoramos alpha
+                    rgb_row.extend([r, g, b])
+                pixels.append(rgb_row)
+            else:
+                pixels.append(reconstructed)
+
             prev_row = reconstructed
 
         return pixels

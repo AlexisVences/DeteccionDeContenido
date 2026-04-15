@@ -113,24 +113,39 @@ def residual_energy(matrix):
     return total / count
 
 
-def dft_2d(matrix):
-    height = len(matrix)
-    width = len(matrix[0])
+def fft_1d(x):
+    N = len(x)
 
-    result = [[0 for _ in range(width)] for _ in range(height)]
+    if N <= 1:
+        return x
 
-    for u in range(height):
-        for v in range(width):
+    if N % 2 != 0:
+        raise ValueError("El tamaño debe ser potencia de 2")
 
-            sum_val = 0
+    even = fft_1d(x[0::2])
+    odd = fft_1d(x[1::2])
 
-            for x in range(height):
-                for y in range(width):
+    result = [0] * N
 
-                    angle = -2j * cmath.pi * ((u * x / height) + (v * y / width))
-                    sum_val += matrix[x][y] * cmath.exp(angle)
+    for k in range(N // 2):
+        t = cmath.exp(-2j * cmath.pi * k / N) * odd[k]
+        result[k] = even[k] + t
+        result[k + N // 2] = even[k] - t
 
-            result[u][v] = abs(sum_val)
+    return result
+
+def fft_2d(matrix):
+    # FFT por filas
+    temp = [fft_1d(row) for row in matrix]
+
+    # transponer
+    temp = list(zip(*temp))
+
+    # FFT por columnas
+    temp = [fft_1d(list(col)) for col in temp]
+
+    # transponer de regreso
+    result = list(zip(*temp))
 
     return result
 
@@ -142,7 +157,7 @@ def spectral_energy(spectrum):
 
     for row in spectrum:
         for value in row:
-            total += value
+            total += abs(value)   # 🔥 importante (complejos)
             count += 1
 
     return total / count
