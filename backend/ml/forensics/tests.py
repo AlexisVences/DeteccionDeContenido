@@ -15,7 +15,7 @@ def select_features(feature_dict):
         feature_dict["spectral_energy"],
         feature_dict["energia_diagonal_2da_derivada_norm"],
 
-        # 🔥 nuevas
+        #neuvas features
         feature_dict["block_variance_mean"],
         feature_dict["block_variance_var"],
         feature_dict["symmetry_score"],
@@ -63,7 +63,6 @@ def load_dataset(dataset_path):
 
     print(f"Total tareas: {len(tasks)}")
 
-    # 🔥 usar todos los núcleos
     with Pool(cpu_count() - 1) as p:
         results = []
         total = len(tasks)
@@ -256,16 +255,11 @@ if __name__ == "__main__":
     X_test = transform_standardizer(X_test, means, stds)
     print(X_train[0])
 
-    print("Entrenando KNN...")
+    for g in [0.05, 0.1, 0.3, 0.5, 1.0]:
+        model = SVM(gamma=g, epochs=30)
+        model.fit(X_train, y_train)
 
-    model = KNN(k=5)
+        pred = model.predict(X_test)
+        acc = accuracy(y_test, pred)
 
-    model.fit(X_train, y_train)
-
-    print("Prediciendo...")
-
-    predictions = model.predict(X_test)
-
-    acc = accuracy(y_test, predictions)
-
-    print("Accuracy:", acc)
+        print(f"Gamma={g} -> Accuracy={acc}")
