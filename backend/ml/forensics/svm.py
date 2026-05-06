@@ -1,45 +1,67 @@
-class SVM:
+import math
+import random
 
-    def __init__(self, lr=0.001, lambda_param=0.01, epochs=1000):
-        self.lr = lr
-        self.lambda_param = lambda_param
+
+class SVM:
+    def __init__(self, gamma=0.5, epochs=20):
+        self.gamma = gamma
         self.epochs = epochs
-        self.w = None
-        self.b = 0
+
+        self.X_train = []
+        self.y_train = []
+        self.alpha = []
+
+    def _rbf(self, x1, x2):
+        sq_dist = 0.0
+
+        for i in range(len(x1)):
+            sq_dist += (x1[i] - x2[i]) ** 2
+
+        return math.exp(-self.gamma * sq_dist)
 
     def fit(self, X, y):
-        n_samples = len(X)
-        n_features = len(X[0])
+        self.X_train = X
+        self.y_train = [1 if label == 1 else -1 for label in y]
 
-        # convertir etiquetas a -1 y 1
-        y_ = [1 if label == 1 else -1 for label in y]
+        n = len(X)
+        self.alpha = [0.0] * n
 
-        # inicializar pesos
-        self.w = [0.0] * n_features
-        self.b = 0.0
+        for epoch in range(self.epochs):
+            indices = list(range(n))
+            random.shuffle(indices)
 
-        for _ in range(self.epochs):
-            for i in range(n_samples):
-                condition = y_[i] * (self._dot(self.w, X[i]) + self.b)
+            errors = 0
 
-                if condition >= 1:
-                    # solo regularización
-                    for j in range(n_features):
-                        self.w[j] -= self.lr * (2 * self.lambda_param * self.w[j])
-                else:
-                    # error → actualizar fuerte
-                    for j in range(n_features):
-                        self.w[j] -= self.lr * (
-                            2 * self.lambda_param * self.w[j] - y_[i] * X[i][j]
-                        )
-                    self.b -= self.lr * y_[i]
+            for i in indices:
+                prediction = self._decision_function(X[i])
+
+                if self.y_train[i] * prediction <= 0:
+                    self.alpha[i] += 1
+                    errors += 1
+
+            print(f"Epoch {epoch+1}/{self.epochs} - errores: {errors}")
+
+            if errors == 0:
+                break
+
+    def _decision_function(self, x):
+        result = 0.0
+
+        for i in range(len(self.X_train)):
+            if self.alpha[i] > 0:
+                result += (
+                    self.alpha[i]
+                    * self.y_train[i]
+                    * self._rbf(self.X_train[i], x)
+                )
+
+        return result
 
     def predict(self, X):
         predictions = []
-        for x in X:
-            val = self._dot(self.w, x) + self.b
-            predictions.append(1 if val >= 0 else 0)
-        return predictions
 
-    def _dot(self, a, b):
-        return sum(a[i] * b[i] for i in range(len(a)))
+        for x in X:
+            val = self._decision_function(x)
+            predictions.append(1 if val >= 0 else 0)
+
+        return predictions

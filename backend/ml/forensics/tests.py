@@ -256,16 +256,11 @@ if __name__ == "__main__":
     X_test = transform_standardizer(X_test, means, stds)
     print(X_train[0])
 
-    print("Entrenando KNN...")
+    for g in [0.05, 0.1, 0.3, 0.5, 1.0]:
+        model = SVM(gamma=g, epochs=30)
+        model.fit(X_train, y_train)
 
-    model = KNN(k=5)
+        pred = model.predict(X_test)
+        acc = accuracy(y_test, pred)
 
-    model.fit(X_train, y_train)
-
-    print("Prediciendo...")
-
-    predictions = model.predict(X_test)
-
-    acc = accuracy(y_test, predictions)
-
-    print("Accuracy:", acc)
+        print(f"Gamma={g} -> Accuracy={acc}")
