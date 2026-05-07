@@ -1,14 +1,20 @@
 ﻿from __future__ import annotations
 
+<<<<<<< Updated upstream
 import math
 import os
 import sys
 import tempfile
 import time
 from collections import Counter
+=======
+import sys
+import tempfile
+>>>>>>> Stashed changes
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import streamlit as st
 
 # Run:
@@ -23,25 +29,26 @@ for candidate in (PROJECT_ROOT, BACKEND_ML_ROOT):
         sys.path.insert(0, candidate_str)
 
 from backend.ml.description.image_descriptor import ImageDescriptor
+<<<<<<< Updated upstream
 from backend.ml.features.feature_extractor import FeatureExtractor
 from backend.ml.forensics.image_quality_gate import evaluate_quality_from_reader
 from backend.ml.forensics.knn import KNN
+=======
+from backend.ml.forensics.classifier_features import extract_classifier_feature_dict
+>>>>>>> Stashed changes
 from backend.ml.forensics.raw_image_reader import PNGReader
+from backend.ml.forensics.training_pipeline import (
+    DEFAULT_DATASET_DIR,
+    DEFAULT_FEATURE_CSV_PATH,
+    DEFAULT_MODEL_PATH,
+    FEATURE_KEYS,
+    load_model_resources,
+    select_features,
+)
 
-
-DATASET_DIR = PROJECT_ROOT / "backend" / "test_images" / "imagenes" / "real_and_fake_face"
-FEATURE_KEYS = [
-    "energy_to_variance_ratio",
-    "block_energy_variance",
-    "spectral_energy",
-    "energia_diagonal_2da_derivada_norm",
-    "block_variance_mean",
-    "block_variance_var",
-    "symmetry_score",
-    "local_hf_variance",
-    "gradient_direction",
-    "entropy_block_var",
-]
+DATASET_DIR = DEFAULT_DATASET_DIR
+FEATURE_DATASET_PATH = DEFAULT_FEATURE_CSV_PATH
+MODEL_ARTIFACT_PATH = DEFAULT_MODEL_PATH
 
 FEATURE_LABELS = {
     "energy_to_variance_ratio": "Relacion energia/varianza",
@@ -84,12 +91,15 @@ def initialize_state() -> None:
         st.session_state.setdefault(key, value)
 
 
+# SOLO se modificó la función inject_styles()
+
 def inject_styles() -> None:
+<<<<<<< Updated upstream
     """Global UI styles: polished dashboard look with subtle animations."""
     st.markdown(
         f"""
         <style>
-            .stApp {{
+            .stApp {
                 background:
                     radial-gradient(circle at 5% 0%, rgba(47,195,255,.22), transparent 30%),
                     radial-gradient(circle at 95% 0%, rgba(31,111,235,.18), transparent 28%),
@@ -167,8 +177,137 @@ def inject_styles() -> None:
             }}
             .footer {{ margin-top: 1.2rem; padding: .95rem 1rem; font-size: .92rem; color: {THEME['muted']}; }}
             .small-muted {{ color: {THEME['muted']}; font-size: .92rem; line-height: 1.6; }}
+=======
+    styles = """
+        <style>
+            .stApp {
+                background:
+                    radial-gradient(circle at top left, rgba(28, 105, 212, 0.12), transparent 30%),
+                    linear-gradient(180deg, #ffffff 0%, {FORD_BG} 100%);
+                color: {FORD_TEXT};
+            }
+
+            /* FIX WARNING TEXT VISIBILITY */
+            div[data-testid="stAlert"] {
+                color: #10243e !important;
+            }
+            div[data-testid="stAlert"] p {
+                color: #10243e !important;
+            }
+
+            /* FIX SECONDARY BUTTON TEXT (Generar descripcion) */
+            div.stButton > button {
+                color: #10243e !important;
+                background-color: #e9eef6 !important;
+                border: 1px solid rgba(0, 52, 120, 0.2) !important;
+            }
+
+            div.stButton > button:hover {
+                color: #ffffff !important;
+                background-color: {FORD_BLUE} !important;
+            }
+
+            .topbar {
+                background: #0d1116;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                color: #ffffff;
+                padding: 1rem 1.5rem;
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
+            }
+            .brand-title {
+                font-size: 0.95rem;
+                letter-spacing: 0.8em;
+                text-transform: uppercase;
+                font-weight: 700;
+                margin: 0;
+            }
+            .stApp .block-container {
+                max-width: 980px;
+                padding-top: 4rem;
+                padding-bottom: 3.5rem;
+                padding-left: 1.5rem;
+                padding-right: 1.5rem;
+            }
+            .hero-card, .section-card, .result-card {
+                background: rgba(255, 255, 255, 0.94);
+                border: 1px solid rgba(0, 52, 120, 0.10);
+                border-radius: 24px;
+                box-shadow: 0 20px 45px rgba(0, 52, 120, 0.08);
+                padding: 1.6rem 1.6rem;
+                margin-bottom: 1.5rem;
+            }
+            .hero-title {
+                color: {FORD_BLUE};
+                font-size: 2.4rem;
+                font-weight: 800;
+                margin-bottom: 0.25rem;
+                letter-spacing: -0.03em;
+            }
+            .hero-subtitle {
+                color: {FORD_TEXT};
+                opacity: 0.88;
+                margin: 0;
+                font-size: 1rem;
+                line-height: 1.7;
+            }
+            .hero-copy {
+                color: #283145;
+                opacity: 0.9;
+                margin-top: 0.8rem;
+                font-size: 0.98rem;
+                line-height: 1.75;
+            }
+            .section-title {
+                color: {FORD_BLUE};
+                font-size: 1.05rem;
+                font-weight: 700;
+                margin-bottom: 0.85rem;
+            }
+            .result-card.ai {
+                border-left: 8px solid {FORD_RED};
+            }
+            .result-card.real {
+                border-left: 8px solid {FORD_GREEN};
+            }
+            .result-label {
+                font-size: 0.95rem;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                opacity: 0.72;
+                margin-bottom: 0.3rem;
+            }
+            .result-value {
+                font-size: 1.9rem;
+                font-weight: 800;
+                margin-bottom: 0.45rem;
+            }
+            .result-help {
+                font-size: 0.98rem;
+                line-height: 1.55;
+                margin: 0;
+            }
+            .description-box {
+                background: linear-gradient(180deg, #ffffff 0%, {FORD_PALE_BLUE} 100%);
+                border: 1px solid rgba(0, 52, 120, 0.12);
+                border-radius: 18px;
+                padding: 1rem 1.1rem;
+                color: {FORD_TEXT};
+                line-height: 1.7;
+            }
+>>>>>>> Stashed changes
         </style>
-        """,
+        """
+    st.markdown(
+        styles
+        .replace("{FORD_BG}", FORD_BG)
+        .replace("{FORD_TEXT}", FORD_TEXT)
+        .replace("{FORD_BLUE}", FORD_BLUE)
+        .replace("{FORD_RED}", FORD_RED)
+        .replace("{FORD_GREEN}", FORD_GREEN)
+        .replace("{FORD_PALE_BLUE}", FORD_PALE_BLUE),
         unsafe_allow_html=True,
     )
 
@@ -176,12 +315,25 @@ def inject_styles() -> None:
 def render_hero() -> None:
     st.markdown(
         """
+<<<<<<< Updated upstream
         <section class="hero">
             <h1 class="hero-title">AI Image Authenticity Analyzer</h1>
             <p class="hero-sub">
                 Plataforma de analisis forense para deteccion de contenido sintetico.
                 Evalua patrones estadisticos, texturales y estructurales de imagenes PNG
                 para identificar senales compatibles con generacion por IA, incluso en modelos avanzados.
+=======
+        <div class="topbar">
+            <div class="brand-title">S H E R L O C K    &nbsp;   A I</div>
+        </div>
+        <div class="hero-card">
+            <div class="hero-title">Sherlock IA</div>
+            <p class="hero-subtitle">
+                Sistema de análisis forense visual para clasificar imágenes PNG y generar descripciones contextuales de manera profesional sobre la misma imagen.
+            </p>
+            <p class="hero-copy">
+                El modelo <strong>S H E R L O C K   I A</strong> combina extracción de características de imagen, normalización estadística y clasificación KNN optimizada para ofrecer respuestas rápidas y confiables.
+>>>>>>> Stashed changes
             </p>
             <div class="pill-wrap">
                 <span class="pill">Vision Forense</span>
@@ -199,6 +351,7 @@ def render_hero() -> None:
     )
 
 
+<<<<<<< Updated upstream
 def select_features(feature_dict: dict[str, float]) -> list[float]:
     return [feature_dict[key] for key in FEATURE_KEYS]
 
@@ -311,6 +464,8 @@ def build_real_reference_explanation(
     return rows
 
 
+=======
+>>>>>>> Stashed changes
 def create_temp_png(image_bytes: bytes) -> Path:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     temp_file.write(image_bytes)
@@ -329,9 +484,18 @@ def load_image(image_bytes: bytes) -> PNGReader:
         temp_path.unlink(missing_ok=True)
 
 
+def get_model_resources() -> dict[str, Any]:
+    resources = st.session_state.get("model_resources")
+    if resources is None:
+        resources = load_trained_model()
+        st.session_state["model_resources"] = resources
+    return resources
+
+
 @st.cache_resource(show_spinner=False)
 def load_trained_model() -> dict[str, Any]:
     if not DATASET_DIR.exists():
+<<<<<<< Updated upstream
         raise FileNotFoundError(f"No se encontro el dataset de entrenamiento en: {DATASET_DIR}")
 
     rows: list[list[float]] = []
@@ -385,11 +549,27 @@ def knn_confidence(model: KNN, sample: list[float]) -> float | None:
     predicted_label = model.predict([sample])[0]
     votes = Counter(label for _, label in neighbors)
     return votes[predicted_label] / len(neighbors)
+=======
+        raise FileNotFoundError(
+            f"No se encontro el dataset de entrenamiento en: {DATASET_DIR}"
+        )
+    if not FEATURE_DATASET_PATH.exists():
+        raise FileNotFoundError(
+            f"No se encontro el CSV de features en: {FEATURE_DATASET_PATH}. "
+            "Ejecuta scripts/feature_extraction.py antes de iniciar la app."
+        )
+    return load_model_resources(
+        model_path=MODEL_ARTIFACT_PATH,
+        csv_path=FEATURE_DATASET_PATH,
+        k=21,
+    )
+>>>>>>> Stashed changes
 
 
 def run_inference(image_bytes: bytes) -> dict[str, Any]:
     reader = load_image(image_bytes)
-    resources = load_trained_model()
+    resources = get_model_resources()
+<<<<<<< Updated upstream
 
     quality = evaluate_quality_from_reader(
         reader,
@@ -414,20 +594,35 @@ def run_inference(image_bytes: bytes) -> dict[str, Any]:
     prediction = resources["model"].predict([normalized_sample])[0]
     confidence = knn_confidence(resources["model"], normalized_sample)
     explanation_rows = build_real_reference_explanation(feature_dict, resources["feature_stats"], prediction)
+=======
+
+    feature_dict = extract_classifier_feature_dict(image_bytes)
+    sample = np.asarray(select_features(feature_dict), dtype=np.float64)
+    normalized_sample = (sample - resources["means"]) / resources["stds"]
+
+    prediction = resources["model"].predict([normalized_sample])[0]
+    confidence = resources["model"].confidence_one(normalized_sample)
+>>>>>>> Stashed changes
 
     return {
         "rejected_by_quality": False,
         "label": prediction,
-        "label_text": "AI Generated" if prediction == 1 else "Real",
+        "label_text": "Generada por IA" if prediction == 1 else "Imagen real",
         "confidence": confidence,
         "feature_dict": feature_dict,
         "dataset_samples": resources["samples"],
         "quality_metrics": quality,
         "feature_explanation": explanation_rows,
         "explanation": (
+<<<<<<< Updated upstream
             "Patrones compatibles con generacion sintetica detectados"
             if prediction == 1
             else "Las caracteristicas se alinean con distribuciones naturales"
+=======
+            "La descripción y explicación de la clasificación como ia generated vendra mas adelante"
+            if prediction == 1
+            else "La descripción y explicación de la clasificación como real vendra mas adelante"
+>>>>>>> Stashed changes
         ),
     }
 
@@ -443,8 +638,16 @@ def reset_analysis_state() -> None:
     st.session_state.description_result = None
 
 
+<<<<<<< Updated upstream
 def render_upload_analysis_section() -> None:
     left, right = st.columns([1.1, 1], gap="large")
+=======
+def render_upload_section() -> None:
+    st.markdown(
+        '<div class="section-card"><div class="section-title">Carge la imagen en la sección a continuación para empezar con el análisis :)</div>',
+        unsafe_allow_html=True,
+    )
+>>>>>>> Stashed changes
 
     with left:
         st.markdown('<section class="card"><div class="card-title">Carga de Imagen</div>', unsafe_allow_html=True)
@@ -478,6 +681,7 @@ def render_upload_analysis_section() -> None:
         st.markdown('<section class="card">', unsafe_allow_html=True)
         st.markdown('<div class="card-title">Pipeline de Analisis</div>', unsafe_allow_html=True)
         st.markdown(
+<<<<<<< Updated upstream
             '<p class="small-muted">El sistema evaluara calidad, extraera caracteristicas forenses y emitira una clasificacion con explicacion.</p>',
             unsafe_allow_html=True,
         )
@@ -597,6 +801,27 @@ def render_forensic_metrics(result: dict[str, Any]) -> None:
 
     st.caption("Estas metricas forman parte de las senales usadas por el clasificador para estimar autenticidad.")
     st.markdown('</section>', unsafe_allow_html=True)
+=======
+            """
+            <div class="section-card">
+                <div class="section-title">Lista para analizar</div>
+                <p style="margin:0; line-height:1.7;">
+                    Presiona "Analizar imagen" para ejecutar el analisis forense.
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if st.button("Analizar imagen", type="primary", use_container_width=True):
+            with st.spinner("Analizando imagen y ejecutando el clasificador..."):
+                try:
+                    st.session_state.classification_result = run_inference(file_bytes)
+                    st.session_state.description_result = None
+                except Exception as error:
+                    st.session_state.classification_result = None
+                    st.error(f"No fue posible analizar la imagen: {error}")
+>>>>>>> Stashed changes
 
 
 def render_result_section() -> None:
@@ -625,15 +850,27 @@ def render_result_section() -> None:
 
     st.markdown(
         f"""
+<<<<<<< Updated upstream
         <section class="result {status_class}">
             <div style="font-size:.82rem; text-transform:uppercase; opacity:.7;">Resultado Principal</div>
             <div style="font-size:1.9rem; font-weight:800; color:{status_color}; margin:.2rem 0;">{result['label_text']}</div>
             <div style="line-height:1.6;">{result['explanation']}</div>
         </section>
+=======
+        <div class="result-card {status_class}">
+            <div class="section-title">Resultado</div>
+            <div class="result-label">Clasificacion</div>
+            <div class="result-value" style="color:{status_color};">
+                {result["label_text"]}
+            </div>
+            <p class="result-help">{result["explanation"]}</p>
+        </div>
+>>>>>>> Stashed changes
         """,
         unsafe_allow_html=True,
     )
 
+<<<<<<< Updated upstream
     k1, k2, k3 = st.columns(3)
     conf = result.get("confidence")
     if conf is None:
@@ -650,6 +887,27 @@ def render_result_section() -> None:
 
     if st.button("Generar descripcion contextual", use_container_width=True):
         with st.spinner("Generando descripcion..."):
+=======
+    # if is_ai:
+    #     st.error("Se detectaron patrones compatibles con generacion sintetica.")
+    # else:
+    #     st.success("La imagen se alinea mejor con distribuciones naturales.")
+
+    metric_col, secondary_col = st.columns(2, gap="large")
+    with metric_col:
+        if confidence is not None:
+            st.metric("Confianza", f"{confidence * 100:.1f}%")
+            st.progress(int(confidence * 100))
+        else:
+            st.warning("No fue posible estimar una confianza con la implementacion actual.")
+
+    with secondary_col:
+        st.metric("Muestras de entrenamiento", str(result["dataset_samples"]))
+        st.caption("Análisis impulsado por un modelo de tipo KNN.")
+
+    if st.button("Generar descripcion", use_container_width=True):
+        with st.spinner("Generando descripcion contextual..."):
+>>>>>>> Stashed changes
             try:
                 st.session_state.description_result = generate_description(st.session_state.uploaded_bytes)
             except Exception as error:
@@ -663,7 +921,15 @@ def render_description_section() -> None:
         return
 
     description_text = description_result.get("description", "").strip()
+<<<<<<< Updated upstream
     st.markdown('<section class="card"><div class="card-title">Descripcion Contextual</div>', unsafe_allow_html=True)
+=======
+    st.markdown(
+        '<div class="section-card"><div class="section-title">Descripcion</div>',
+        unsafe_allow_html=True,
+    )
+
+>>>>>>> Stashed changes
     if description_text:
         st.write(description_text)
     else:
@@ -709,14 +975,43 @@ def render_footer() -> None:
 
 def main() -> None:
     st.set_page_config(
+<<<<<<< Updated upstream
         page_title="AI Image Authenticity Analyzer",
         page_icon="AI",
         layout="wide",
+=======
+        page_title="Sherlock IA",
+        page_icon="🔎",
+        layout="centered",
+>>>>>>> Stashed changes
     )
 
     initialize_state()
     inject_styles()
     render_hero()
+
+    try:
+        with st.spinner("Cargando el modelo Sherlock-IA..."):
+            get_model_resources()
+<<<<<<< Updated upstream
+=======
+    except Exception as error:
+        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
+        return
+
+    try:
+        render_upload_section()
+>>>>>>> Stashed changes
+    except Exception as error:
+        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
+        return
+
+    try:
+        with st.spinner("Cargando el modelo Sherlock-IA..."):
+            get_model_resources()
+    except Exception as error:
+        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
+        return
 
     try:
         render_upload_analysis_section()
@@ -725,7 +1020,11 @@ def main() -> None:
         return
 
     if st.session_state.uploaded_bytes is None:
+<<<<<<< Updated upstream
         st.info("Carga una imagen PNG para habilitar el analisis forense.")
+=======
+        st.warning("Nota: este modelo es únicamente de consulta y no tiene ninguna validez oficial")
+>>>>>>> Stashed changes
 
     render_result_section()
     render_description_section()

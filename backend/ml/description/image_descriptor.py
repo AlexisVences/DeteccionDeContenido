@@ -1,4 +1,3 @@
-# backend/ml/description/image_descriptor.py
 
 from backend.ml.features.feature_extractor import FeatureExtractor
 from backend.ml.description.advanced_semantic_extractor import (

@@ -43,10 +43,10 @@ class VisualHeuristicAnalyzer:
         if top_blue_ratio > 0.35:
             evidence.append("zona superior con predominio azul")
 
-        if bottom_green_ratio > 0.25:
+        if bottom_green_ratio > 0.28:
             evidence.append("zona inferior con presencia de vegetacion")
 
-        if bottom_yellow_ratio > 0.25:
+        if bottom_yellow_ratio > 0.35 and dominant_color != "green":
             evidence.append("zona inferior con tonos calidos o arenosos")
 
         if edge_density > 0.28:
@@ -141,7 +141,7 @@ class VisualHeuristicAnalyzer:
                 edge_density < 0.18 and
                 block_variance < 500000
             ),
-            "desert_like": dominant_color == "yellow" or bottom_yellow_ratio > 0.25,
+            "desert_like": dominant_color == "yellow" or bottom_yellow_ratio > 0.35,
             "open_scene_like": top_blue_ratio > 0.30 and edge_density < 0.20,
             "complex_scene_like": block_variance > 220 and edge_density > 0.24,
         }

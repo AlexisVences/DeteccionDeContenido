@@ -12,6 +12,7 @@ class IndoorOutdoorDetector:
         colorfulness = color.get("colorfulness", 0)
         texture = semantic.get("texture", "")
         palette_hint = semantic.get("palette_hint", "")
+        center_darkness_bias = spatial.get("center_darkness_bias", 0)
 
         if dominant_color in ("gray", "mixed"):
             indoor_score += 0.8
@@ -62,6 +63,13 @@ class IndoorOutdoorDetector:
         if dominant_color == "blue" and spatial.get("center_darkness_bias", 0) < -30:
             outdoor_score += 0.8
             evidence.append("sujeto central iluminado en escena abierta")
+
+        if center_darkness_bias < -25 and edge_density > 0.22:
+            outdoor_score += 0.7
+            evidence.append("sujeto destacado en entorno exterior")
+
+        if dominant_color == "blue" and top_blue_ratio > 0.10 and center_darkness_bias < -25:
+            outdoor_score += 0.5
 
         label = "interior" if indoor_score >= outdoor_score else "exterior"
 

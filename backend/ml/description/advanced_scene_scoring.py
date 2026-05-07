@@ -167,14 +167,18 @@ class AdvancedSceneScoringEngine:
             evidence["road"].append("indicios de carretera")
 
         if object_context.get("has_vehicle"):
-            scores["vehicle_scene"] += 1.5
-            scores["urban"] += 0.6
+            scores["vehicle_scene"] += 2.4
+            scores["urban"] += 0.5
             evidence["vehicle_scene"].append("indicios de vehiculo")
 
         if object_context.get("has_vehicle") and object_context.get("has_road"):
             scores["vehicle_scene"] += 1.1
             scores["road"] += 0.6
             evidence["vehicle_scene"].append("vehiculo sobre via probable")
+
+        if object_context.get("has_vehicle") and not object_context.get("has_sea"):
+            scores["coastal"] -= 0.4
+            scores["natural"] -= 0.2
 
         if not object_context.get("has_sea"):
             scores["coastal"] -= 0.3

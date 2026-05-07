@@ -17,6 +17,8 @@ class AdvancedSemanticFeatureExtractor:
             "palette_hint": self._palette_hint(
                 dominant_color,
                 feature_dict.get("colorfulness", 0),
+                feature_dict.get("top_blue_ratio", 0),
+                feature_dict.get("edge_density", 0),
             ),
             "spatial_layout": self._spatial_layout(
                 feature_dict.get("top_blue_ratio", 0),
@@ -73,11 +75,13 @@ class AdvancedSemanticFeatureExtractor:
             return "bordes moderados"
         return "bordes densos"
 
-    def _palette_hint(self, dominant_color, colorfulness):
+    def _palette_hint(self, dominant_color, colorfulness, top_blue_ratio, edge_density):
         if dominant_color == "green":
             return "predominancia de vegetacion"
-        if dominant_color == "blue":
+        if dominant_color == "blue" and (top_blue_ratio > 0.28 or edge_density < 0.18):
             return "predominancia de cielo o agua"
+        if dominant_color == "blue":
+            return "paleta fria azulada"
         if dominant_color == "yellow":
             return "predominancia de tonos calidos o arena"
         if dominant_color == "gray":

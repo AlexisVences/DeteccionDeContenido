@@ -36,7 +36,7 @@ def main():
         Path("backend/ml/forensics/paisaje_playa.png"),
         Path("backend/ml/forensics/paisaje_automovil.png"),
         Path("backend/ml/forensics/paisaje_urbano.png"),
-        Path("backend/test_images/imagenes/real_and_fake_face/training_real/real_00975.png"),
+        Path("backend/test_images/imagenes/real_and_fake_general/dataset/real/img_00000.png"),
     ]
 
     for image_path in test_images:
