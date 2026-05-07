@@ -1,0 +1,19 @@
+{
+  "dataset_dir": "C:\\DetectorIA\\backend\\test_images\\imagenes\\real_and_fake_general",
+  "csv_path": "C:\\DetectorIA\\backend\\models\\real_and_fake_general_features.csv",
+  "rows": 10000,
+  "total_images": 10000,
+  "feature_keys": [
+    "energy_to_variance_ratio",
+    "block_energy_variance",
+    "spectral_energy",
+    "energia_diagonal_2da_derivada_norm",
+    "block_variance_mean",
+    "block_variance_var",
+    "symmetry_score",
+    "local_hf_variance",
+    "gradient_direction",
+    "entropy_block_var"
+  ],
+  "extraction_version": 2
+}

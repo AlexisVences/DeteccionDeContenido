@@ -1,21 +1,16 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
-<<<<<<< Updated upstream
-import math
+import io
 import os
 import sys
 import tempfile
 import time
-from collections import Counter
-=======
-import sys
-import tempfile
->>>>>>> Stashed changes
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 import streamlit as st
+from PIL import Image
 
 # Run:
 # streamlit run app.py
@@ -29,13 +24,11 @@ for candidate in (PROJECT_ROOT, BACKEND_ML_ROOT):
         sys.path.insert(0, candidate_str)
 
 from backend.ml.description.image_descriptor import ImageDescriptor
-<<<<<<< Updated upstream
-from backend.ml.features.feature_extractor import FeatureExtractor
-from backend.ml.forensics.image_quality_gate import evaluate_quality_from_reader
-from backend.ml.forensics.knn import KNN
-=======
 from backend.ml.forensics.classifier_features import extract_classifier_feature_dict
->>>>>>> Stashed changes
+from backend.ml.forensics.image_quality_gate import (
+    evaluate_quality_from_reader,
+    suggest_focus_crop_box,
+)
 from backend.ml.forensics.raw_image_reader import PNGReader
 from backend.ml.forensics.training_pipeline import (
     DEFAULT_DATASET_DIR,
@@ -65,7 +58,6 @@ FEATURE_LABELS = {
 
 DEFAULT_SHARPNESS_THRESHOLD = float(os.getenv("IA_SHARPNESS_THRESHOLD", "0.42"))
 
-# Visual system
 THEME = {
     "navy": "#0b1f3a",
     "blue": "#1f6feb",
@@ -86,20 +78,17 @@ def initialize_state() -> None:
         "uploaded_bytes": None,
         "classification_result": None,
         "description_result": None,
+        "model_resources": None,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
 
 
-# SOLO se modificó la función inject_styles()
-
 def inject_styles() -> None:
-<<<<<<< Updated upstream
-    """Global UI styles: polished dashboard look with subtle animations."""
     st.markdown(
         f"""
         <style>
-            .stApp {
+            .stApp {{
                 background:
                     radial-gradient(circle at 5% 0%, rgba(47,195,255,.22), transparent 30%),
                     radial-gradient(circle at 95% 0%, rgba(31,111,235,.18), transparent 28%),
@@ -122,6 +111,17 @@ def inject_styles() -> None:
                 border-radius: 18px;
                 box-shadow: 0 12px 34px rgba(11,31,58,.07);
             }}
+            div[data-testid="stExpander"] {{
+                background: rgba(255,255,255,.82);
+                border: 1px solid rgba(11,31,58,.08);
+                border-radius: 18px;
+                overflow: hidden;
+                box-shadow: 0 10px 28px rgba(11,31,58,.05);
+            }}
+            div[data-testid="stExpander"] details summary {{
+                padding-top: .2rem;
+                padding-bottom: .2rem;
+            }}
             .hero {{
                 padding: 1.4rem 1.5rem;
                 margin-bottom: 1rem;
@@ -139,7 +139,12 @@ def inject_styles() -> None:
                 line-height: 1.62;
                 font-size: 1.02rem;
             }}
-            .pill-wrap {{ margin-top: .9rem; display: flex; gap: .45rem; flex-wrap: wrap; }}
+            .pill-wrap {{
+                margin-top: .9rem;
+                display: flex;
+                gap: .45rem;
+                flex-wrap: wrap;
+            }}
             .pill {{
                 background: rgba(31,111,235,.10);
                 border: 1px solid rgba(31,111,235,.25);
@@ -158,156 +163,160 @@ def inject_styles() -> None:
                 padding: .6rem .72rem;
                 font-size: .92rem;
             }}
-            .card {{ padding: 1rem 1rem; margin-bottom: .9rem; }}
+            .card {{
+                padding: 1rem 1rem;
+                margin-bottom: .9rem;
+            }}
             .card-title {{
                 color: {THEME['navy']};
                 font-size: 1rem;
                 font-weight: 750;
                 margin-bottom: .55rem;
             }}
-            .result {{ padding: 1rem 1.1rem; margin-bottom: .85rem; border-left: 7px solid {THEME['blue']}; }}
+            .result {{
+                padding: 1rem 1.1rem;
+                margin-bottom: .85rem;
+                border-left: 7px solid {THEME['blue']};
+            }}
             .result.ai {{ border-left-color: {THEME['danger']}; }}
             .result.real {{ border-left-color: {THEME['success']}; }}
             .result.rejected {{ border-left-color: {THEME['warning']}; }}
-            .kpi {{
-                background: #f8fbff;
+            .result-hero {{
+                padding: 1.15rem 1.2rem 1rem 1.2rem;
+                margin-bottom: 1rem;
+                border-radius: 22px;
                 border: 1px solid rgba(11,31,58,.08);
-                border-radius: 14px;
-                padding: .68rem .78rem;
-            }}
-            .footer {{ margin-top: 1.2rem; padding: .95rem 1rem; font-size: .92rem; color: {THEME['muted']}; }}
-            .small-muted {{ color: {THEME['muted']}; font-size: .92rem; line-height: 1.6; }}
-=======
-    styles = """
-        <style>
-            .stApp {
                 background:
-                    radial-gradient(circle at top left, rgba(28, 105, 212, 0.12), transparent 30%),
-                    linear-gradient(180deg, #ffffff 0%, {FORD_BG} 100%);
-                color: {FORD_TEXT};
-            }
-
-            /* FIX WARNING TEXT VISIBILITY */
-            div[data-testid="stAlert"] {
-                color: #10243e !important;
-            }
-            div[data-testid="stAlert"] p {
-                color: #10243e !important;
-            }
-
-            /* FIX SECONDARY BUTTON TEXT (Generar descripcion) */
-            div.stButton > button {
-                color: #10243e !important;
-                background-color: #e9eef6 !important;
-                border: 1px solid rgba(0, 52, 120, 0.2) !important;
-            }
-
-            div.stButton > button:hover {
-                color: #ffffff !important;
-                background-color: {FORD_BLUE} !important;
-            }
-
-            .topbar {
-                background: #0d1116;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-                color: #ffffff;
-                padding: 1rem 1.5rem;
-                position: sticky;
-                top: 0;
-                z-index: 100;
-                box-shadow: 0 18px 40px rgba(0, 0, 0, 0.16);
-            }
-            .brand-title {
-                font-size: 0.95rem;
-                letter-spacing: 0.8em;
+                    radial-gradient(circle at top right, rgba(47,195,255,.12), transparent 28%),
+                    linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.98));
+                box-shadow: 0 18px 38px rgba(11,31,58,.08);
+            }}
+            .result-hero.ai {{
+                border-left: 8px solid {THEME['danger']};
+            }}
+            .result-hero.real {{
+                border-left: 8px solid {THEME['success']};
+            }}
+            .result-kicker {{
+                font-size: .78rem;
                 text-transform: uppercase;
+                letter-spacing: .08em;
+                color: {THEME['muted']};
+                margin-bottom: .45rem;
                 font-weight: 700;
+            }}
+            .result-title {{
+                font-size: 2rem;
+                line-height: 1.05;
+                font-weight: 850;
+                margin: 0 0 .45rem 0;
+            }}
+            .result-copy {{
+                color: {THEME['text']};
+                line-height: 1.58;
                 margin: 0;
-            }
-            .stApp .block-container {
-                max-width: 980px;
-                padding-top: 4rem;
-                padding-bottom: 3.5rem;
-                padding-left: 1.5rem;
-                padding-right: 1.5rem;
-            }
-            .hero-card, .section-card, .result-card {
-                background: rgba(255, 255, 255, 0.94);
-                border: 1px solid rgba(0, 52, 120, 0.10);
-                border-radius: 24px;
-                box-shadow: 0 20px 45px rgba(0, 52, 120, 0.08);
-                padding: 1.6rem 1.6rem;
-                margin-bottom: 1.5rem;
-            }
-            .hero-title {
-                color: {FORD_BLUE};
-                font-size: 2.4rem;
-                font-weight: 800;
-                margin-bottom: 0.25rem;
-                letter-spacing: -0.03em;
-            }
-            .hero-subtitle {
-                color: {FORD_TEXT};
-                opacity: 0.88;
-                margin: 0;
-                font-size: 1rem;
-                line-height: 1.7;
-            }
-            .hero-copy {
-                color: #283145;
-                opacity: 0.9;
-                margin-top: 0.8rem;
-                font-size: 0.98rem;
-                line-height: 1.75;
-            }
-            .section-title {
-                color: {FORD_BLUE};
-                font-size: 1.05rem;
+                max-width: 65ch;
+            }}
+            .result-badge {{
+                display: inline-flex;
+                align-items: center;
+                gap: .35rem;
+                margin-top: .85rem;
+                padding: .34rem .62rem;
+                border-radius: 999px;
+                background: rgba(11,31,58,.05);
+                color: {THEME['navy']};
+                font-size: .82rem;
                 font-weight: 700;
-                margin-bottom: 0.85rem;
-            }
-            .result-card.ai {
-                border-left: 8px solid {FORD_RED};
-            }
-            .result-card.real {
-                border-left: 8px solid {FORD_GREEN};
-            }
-            .result-label {
-                font-size: 0.95rem;
-                text-transform: uppercase;
-                letter-spacing: 0.08em;
-                opacity: 0.72;
-                margin-bottom: 0.3rem;
-            }
-            .result-value {
-                font-size: 1.9rem;
-                font-weight: 800;
-                margin-bottom: 0.45rem;
-            }
-            .result-help {
-                font-size: 0.98rem;
-                line-height: 1.55;
-                margin: 0;
-            }
-            .description-box {
-                background: linear-gradient(180deg, #ffffff 0%, {FORD_PALE_BLUE} 100%);
-                border: 1px solid rgba(0, 52, 120, 0.12);
+            }}
+            .stat-grid {{
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: .85rem;
+                margin: .15rem 0 1rem 0;
+            }}
+            .mini-stat-grid {{
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: .8rem;
+                margin-top: .85rem;
+            }}
+            .stat-card {{
+                background: rgba(255,255,255,.92);
+                border: 1px solid rgba(11,31,58,.08);
                 border-radius: 18px;
-                padding: 1rem 1.1rem;
-                color: {FORD_TEXT};
-                line-height: 1.7;
-            }
->>>>>>> Stashed changes
+                padding: .9rem .95rem;
+                box-shadow: 0 10px 24px rgba(11,31,58,.05);
+            }}
+            .stat-label {{
+                color: {THEME['muted']};
+                font-size: .78rem;
+                text-transform: uppercase;
+                letter-spacing: .06em;
+                margin-bottom: .35rem;
+                font-weight: 700;
+            }}
+            .stat-value {{
+                color: {THEME['navy']};
+                font-size: 1.45rem;
+                line-height: 1.05;
+                font-weight: 800;
+                margin-bottom: .18rem;
+            }}
+            .stat-help {{
+                color: {THEME['muted']};
+                font-size: .88rem;
+                line-height: 1.45;
+            }}
+            .insight-card {{
+                background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.95));
+                border: 1px solid rgba(11,31,58,.08);
+                border-radius: 18px;
+                padding: 1rem 1.05rem;
+                margin-bottom: 1rem;
+                box-shadow: 0 12px 28px rgba(11,31,58,.05);
+            }}
+            .insight-title {{
+                color: {THEME['navy']};
+                font-size: 1rem;
+                font-weight: 800;
+                margin-bottom: .45rem;
+            }}
+            .insight-copy {{
+                color: {THEME['text']};
+                line-height: 1.62;
+                margin: 0;
+            }}
+            .insight-list {{
+                margin: .7rem 0 0 0;
+                padding-left: 1.1rem;
+                color: {THEME['text']};
+            }}
+            .insight-list li {{
+                margin-bottom: .35rem;
+                line-height: 1.55;
+            }}
+            .footer {{
+                margin-top: 1.2rem;
+                padding: .95rem 1rem;
+                font-size: .92rem;
+                color: {THEME['muted']};
+            }}
+            .small-muted {{
+                color: {THEME['muted']};
+                font-size: .92rem;
+                line-height: 1.6;
+            }}
+            @media (max-width: 900px) {{
+                .stat-grid, .mini-stat-grid {{
+                    grid-template-columns: 1fr;
+                }}
+                .result-title {{
+                    font-size: 1.6rem;
+                }}
+            }}
         </style>
-        """
-    st.markdown(
-        styles
-        .replace("{FORD_BG}", FORD_BG)
-        .replace("{FORD_TEXT}", FORD_TEXT)
-        .replace("{FORD_BLUE}", FORD_BLUE)
-        .replace("{FORD_RED}", FORD_RED)
-        .replace("{FORD_GREEN}", FORD_GREEN)
-        .replace("{FORD_PALE_BLUE}", FORD_PALE_BLUE),
+        """,
         unsafe_allow_html=True,
     )
 
@@ -315,32 +324,13 @@ def inject_styles() -> None:
 def render_hero() -> None:
     st.markdown(
         """
-<<<<<<< Updated upstream
         <section class="hero">
-            <h1 class="hero-title">AI Image Authenticity Analyzer</h1>
+            <h1 class="hero-title">Sherlock IA</h1>
             <p class="hero-sub">
                 Plataforma de analisis forense para deteccion de contenido sintetico.
                 Evalua patrones estadisticos, texturales y estructurales de imagenes PNG
-                para identificar senales compatibles con generacion por IA, incluso en modelos avanzados.
-=======
-        <div class="topbar">
-            <div class="brand-title">S H E R L O C K    &nbsp;   A I</div>
-        </div>
-        <div class="hero-card">
-            <div class="hero-title">Sherlock IA</div>
-            <p class="hero-subtitle">
-                Sistema de análisis forense visual para clasificar imágenes PNG y generar descripciones contextuales de manera profesional sobre la misma imagen.
+                para identificar senales compatibles con generacion por IA.
             </p>
-            <p class="hero-copy">
-                El modelo <strong>S H E R L O C K   I A</strong> combina extracción de características de imagen, normalización estadística y clasificación KNN optimizada para ofrecer respuestas rápidas y confiables.
->>>>>>> Stashed changes
-            </p>
-            <div class="pill-wrap">
-                <span class="pill">Vision Forense</span>
-                <span class="pill">Analisis Estadistico</span>
-                <span class="pill">Deteccion de Contenido Sintetico</span>
-                <span class="pill">Calidad de Imagen</span>
-            </div>
             <div class="warn">
                 Este sistema es de apoyo tecnico y no representa una verdad absoluta.
                 El resultado debe interpretarse junto con contexto y evidencia adicional.
@@ -351,127 +341,20 @@ def render_hero() -> None:
     )
 
 
-<<<<<<< Updated upstream
-def select_features(feature_dict: dict[str, float]) -> list[float]:
-    return [feature_dict[key] for key in FEATURE_KEYS]
-
-
-def fit_standardizer(rows: list[list[float]]) -> tuple[list[float], list[float]]:
-    column_count = len(rows[0])
-    means = []
-    stds = []
-    for index in range(column_count):
-        values = [row[index] for row in rows]
-        mean_value = sum(values) / len(values)
-        variance = sum((value - mean_value) ** 2 for value in values) / len(values)
-        means.append(mean_value)
-        stds.append(math.sqrt(variance))
-    return means, stds
-
-
-def transform_standardizer(rows: list[list[float]], means: list[float], stds: list[float]) -> list[list[float]]:
-    transformed = []
-    for row in rows:
-        normalized = []
-        for index, value in enumerate(row):
-            if stds[index] == 0:
-                normalized.append(0.0)
-            else:
-                normalized.append((value - means[index]) / stds[index])
-        transformed.append(normalized)
-    return transformed
-
-
-def dataset_label(folder_name: str) -> int:
-    normalized = folder_name.lower()
-    if "fake" in normalized or "ai" in normalized:
-        return 1
-    if "real" in normalized:
-        return 0
-    raise ValueError(f"No se pudo inferir la etiqueta para la carpeta: {folder_name}")
-
-
-def summarize_feature_statistics(rows: list[list[float]], labels: list[int]) -> dict[str, dict[str, float]]:
-    real_rows = [row for row, label in zip(rows, labels) if label == 0]
-    fake_rows = [row for row, label in zip(rows, labels) if label == 1]
-    if not real_rows:
-        raise ValueError("No hay muestras reales en el dataset de entrenamiento.")
-
-    summary: dict[str, dict[str, float]] = {}
-    for idx, key in enumerate(FEATURE_KEYS):
-        real_values = [row[idx] for row in real_rows]
-        fake_values = [row[idx] for row in fake_rows] if fake_rows else []
-
-        real_mean = sum(real_values) / len(real_values)
-        real_var = sum((v - real_mean) ** 2 for v in real_values) / len(real_values)
-        real_std = math.sqrt(real_var)
-
-        stats = {
-            "real_mean": real_mean,
-            "real_std": real_std,
-            "real_min": min(real_values),
-            "real_max": max(real_values),
-        }
-        if fake_values:
-            fake_mean = sum(fake_values) / len(fake_values)
-            fake_var = sum((v - fake_mean) ** 2 for v in fake_values) / len(fake_values)
-            stats["fake_mean"] = fake_mean
-            stats["fake_std"] = math.sqrt(fake_var)
-
-        summary[key] = stats
-
-    return summary
-
-
-def build_real_reference_explanation(
-    feature_dict: dict[str, float],
-    stats: dict[str, dict[str, float]],
-    predicted_label: int,
-) -> list[dict[str, Any]]:
-    rows: list[dict[str, Any]] = []
-    for key in FEATURE_KEYS:
-        if key not in feature_dict or key not in stats:
-            continue
-
-        value = feature_dict[key]
-        real_mean = stats[key]["real_mean"]
-        real_std = stats[key]["real_std"]
-        real_min = stats[key]["real_min"]
-        real_max = stats[key]["real_max"]
-
-        z_real = 0.0 if real_std == 0 else (value - real_mean) / real_std
-        out_of_range = value < real_min or value > real_max
-
-        score = abs(z_real) + (1.2 if out_of_range else 0.0)
-        if predicted_label == 0:
-            score = -score
-
-        rows.append(
-            {
-                "feature": FEATURE_LABELS.get(key, key),
-                "feature_key": key,
-                "value": value,
-                "real_mean": real_mean,
-                "real_min": real_min,
-                "real_max": real_max,
-                "z_real": z_real,
-                "status": "Fuera de rango REAL" if out_of_range else "Dentro de rango REAL",
-                "impact_score": score,
-            }
-        )
-
-    rows.sort(key=lambda item: abs(item["impact_score"]), reverse=True)
-    return rows
-
-
-=======
->>>>>>> Stashed changes
 def create_temp_png(image_bytes: bytes) -> Path:
     temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     temp_file.write(image_bytes)
     temp_file.flush()
     temp_file.close()
     return Path(temp_file.name)
+
+
+def crop_png_bytes(image_bytes: bytes, bbox: tuple[int, int, int, int]) -> bytes:
+    with Image.open(io.BytesIO(image_bytes)) as image:
+        cropped = image.convert("RGB").crop(bbox)
+        buffer = io.BytesIO()
+        cropped.save(buffer, format="PNG")
+        return buffer.getvalue()
 
 
 def load_image(image_bytes: bytes) -> PNGReader:
@@ -495,61 +378,6 @@ def get_model_resources() -> dict[str, Any]:
 @st.cache_resource(show_spinner=False)
 def load_trained_model() -> dict[str, Any]:
     if not DATASET_DIR.exists():
-<<<<<<< Updated upstream
-        raise FileNotFoundError(f"No se encontro el dataset de entrenamiento en: {DATASET_DIR}")
-
-    rows: list[list[float]] = []
-    labels: list[int] = []
-
-    for folder in sorted(DATASET_DIR.iterdir()):
-        if not folder.is_dir():
-            continue
-        label = dataset_label(folder.name)
-
-        for image_path in sorted(folder.glob("*.png")):
-            reader = PNGReader(str(image_path))
-            reader.read()
-            feature_dict = FeatureExtractor.extract_from_png_reader(reader)
-            rows.append(select_features(feature_dict))
-            labels.append(label)
-
-    if not rows:
-        raise ValueError("El dataset de entrenamiento no contiene imagenes PNG validas.")
-
-    means, stds = fit_standardizer(rows)
-    normalized_rows = transform_standardizer(rows, means, stds)
-
-    model = KNN(k=5)
-    model.fit(normalized_rows, labels)
-    feature_stats = summarize_feature_statistics(rows, labels)
-
-    return {
-        "model": model,
-        "means": means,
-        "stds": stds,
-        "samples": len(rows),
-        "feature_stats": feature_stats,
-    }
-
-
-def knn_confidence(model: KNN, sample: list[float]) -> float | None:
-    if not model.X_train or not model.y_train:
-        return None
-
-    distances = []
-    for index, trained_row in enumerate(model.X_train):
-        distance = model._euclidean(trained_row, sample)
-        distances.append((distance, model.y_train[index]))
-
-    distances.sort(key=lambda item: item[0])
-    neighbors = distances[: model.k]
-    if not neighbors:
-        return None
-
-    predicted_label = model.predict([sample])[0]
-    votes = Counter(label for _, label in neighbors)
-    return votes[predicted_label] / len(neighbors)
-=======
         raise FileNotFoundError(
             f"No se encontro el dataset de entrenamiento en: {DATASET_DIR}"
         )
@@ -563,18 +391,149 @@ def knn_confidence(model: KNN, sample: list[float]) -> float | None:
         csv_path=FEATURE_DATASET_PATH,
         k=21,
     )
->>>>>>> Stashed changes
 
 
-def run_inference(image_bytes: bytes) -> dict[str, Any]:
+def build_feature_explanation(
+    feature_dict: dict[str, float],
+    means: np.ndarray,
+    stds: np.ndarray,
+) -> list[dict[str, float | str]]:
+    rows: list[dict[str, float | str]] = []
+
+    for idx, key in enumerate(FEATURE_KEYS):
+        value = float(feature_dict.get(key, 0.0))
+        mean_value = float(means[idx])
+        std_value = float(stds[idx])
+        z_score = 0.0 if std_value == 0 else (value - mean_value) / std_value
+        rows.append(
+            {
+                "feature": FEATURE_LABELS.get(key, key),
+                "feature_key": key,
+                "value": value,
+                "mean": mean_value,
+                "std": std_value,
+                "z_score": z_score,
+                "impact": abs(z_score),
+            }
+        )
+
+    rows.sort(key=lambda item: float(item["impact"]), reverse=True)
+    return rows
+
+
+def build_feature_summary(
+    rows: list[dict[str, float | str]],
+    predicted_label: int,
+) -> tuple[str, list[str]]:
+    if not rows:
+        return (
+            "No se generaron hallazgos interpretables para resumir esta clasificacion.",
+            [],
+        )
+
+    top_rows = rows[:3]
+    if predicted_label == 1:
+        summary = (
+            "La decision se apoyó en variaciones locales y patrones de textura "
+            "menos consistentes con una captura natural."
+        )
+    else:
+        summary = (
+            "La decision se apoyó en una distribucion de textura y estructura "
+            "mas cercana al comportamiento esperado en imagenes naturales."
+        )
+
+    insights = []
+    for row in top_rows:
+        z_score = float(row["z_score"])
+        tendency = "por encima" if z_score >= 0 else "por debajo"
+        feature_name = str(row["feature"])
+        magnitude = abs(z_score)
+        if magnitude >= 2.0:
+            qualifier = "muy alejada"
+        elif magnitude >= 1.2:
+            qualifier = "moderadamente alejada"
+        else:
+            qualifier = "ligeramente alejada"
+
+        insights.append(
+            f"{feature_name}: {qualifier} del promedio del dataset ({tendency}, z={z_score:+.2f})."
+        )
+
+    return summary, insights
+
+
+def render_stat_grid(cards: list[dict[str, str]], mini: bool = False) -> None:
+    grid_class = "mini-stat-grid" if mini else "stat-grid"
+    parts = [f'<div class="{grid_class}">']
+    for card in cards:
+        parts.append(
+            f"""
+            <div class="stat-card">
+                <div class="stat-label">{card['label']}</div>
+                <div class="stat-value">{card['value']}</div>
+                <div class="stat-help">{card['help']}</div>
+            </div>
+            """
+        )
+    parts.append("</div>")
+    st.markdown("".join(parts), unsafe_allow_html=True)
+
+
+def select_analysis_image(image_bytes: bytes) -> dict[str, Any]:
     reader = load_image(image_bytes)
-    resources = get_model_resources()
-<<<<<<< Updated upstream
-
-    quality = evaluate_quality_from_reader(
+    original_quality = evaluate_quality_from_reader(
         reader,
         config={"sharpness_threshold": DEFAULT_SHARPNESS_THRESHOLD},
     )
+    focus_bbox = suggest_focus_crop_box(reader, crop_width_blocks=10, crop_height_blocks=10)
+
+    if focus_bbox is None:
+        return {
+            "reader": reader,
+            "image_bytes": image_bytes,
+            "quality": original_quality,
+            "used_focus_crop": False,
+            "focus_bbox": None,
+        }
+
+    focused_bytes = crop_png_bytes(image_bytes, focus_bbox)
+    focused_reader = load_image(focused_bytes)
+    focused_quality = evaluate_quality_from_reader(
+        focused_reader,
+        config={"sharpness_threshold": DEFAULT_SHARPNESS_THRESHOLD},
+    )
+
+    original_score = float(original_quality["sharpness_score"])
+    focused_score = float(focused_quality["sharpness_score"])
+    use_focus_crop = (
+        not original_quality["is_acceptable"] or
+        focused_quality["is_acceptable"] and focused_score >= original_score + 0.06
+    )
+
+    if use_focus_crop:
+        return {
+            "reader": focused_reader,
+            "image_bytes": focused_bytes,
+            "quality": focused_quality,
+            "used_focus_crop": True,
+            "focus_bbox": focus_bbox,
+        }
+
+    return {
+        "reader": reader,
+        "image_bytes": image_bytes,
+        "quality": original_quality,
+        "used_focus_crop": False,
+        "focus_bbox": focus_bbox,
+    }
+
+
+def run_inference(image_bytes: bytes) -> dict[str, Any]:
+    analysis_input = select_analysis_image(image_bytes)
+    reader = analysis_input["reader"]
+    resources = get_model_resources()
+    quality = analysis_input["quality"]
 
     if not quality["is_acceptable"]:
         return {
@@ -587,22 +546,17 @@ def run_inference(image_bytes: bytes) -> dict[str, Any]:
             "dataset_samples": resources["samples"],
         }
 
-    feature_dict = FeatureExtractor.extract_from_png_reader(reader)
-    sample = select_features(feature_dict)
-    normalized_sample = transform_standardizer([sample], resources["means"], resources["stds"])[0]
-
-    prediction = resources["model"].predict([normalized_sample])[0]
-    confidence = knn_confidence(resources["model"], normalized_sample)
-    explanation_rows = build_real_reference_explanation(feature_dict, resources["feature_stats"], prediction)
-=======
-
-    feature_dict = extract_classifier_feature_dict(image_bytes)
+    feature_dict = extract_classifier_feature_dict(analysis_input["image_bytes"])
     sample = np.asarray(select_features(feature_dict), dtype=np.float64)
     normalized_sample = (sample - resources["means"]) / resources["stds"]
 
     prediction = resources["model"].predict([normalized_sample])[0]
     confidence = resources["model"].confidence_one(normalized_sample)
->>>>>>> Stashed changes
+    explanation_rows = build_feature_explanation(
+        feature_dict,
+        np.asarray(resources["means"], dtype=np.float64),
+        np.asarray(resources["stds"], dtype=np.float64),
+    )
 
     return {
         "rejected_by_quality": False,
@@ -613,16 +567,12 @@ def run_inference(image_bytes: bytes) -> dict[str, Any]:
         "dataset_samples": resources["samples"],
         "quality_metrics": quality,
         "feature_explanation": explanation_rows,
+        "used_focus_crop": analysis_input["used_focus_crop"],
+        "focus_bbox": analysis_input["focus_bbox"],
         "explanation": (
-<<<<<<< Updated upstream
-            "Patrones compatibles con generacion sintetica detectados"
+            "Patrones compatibles con generacion sintetica detectados."
             if prediction == 1
-            else "Las caracteristicas se alinean con distribuciones naturales"
-=======
-            "La descripción y explicación de la clasificación como ia generated vendra mas adelante"
-            if prediction == 1
-            else "La descripción y explicación de la clasificación como real vendra mas adelante"
->>>>>>> Stashed changes
+            else "Las caracteristicas se alinean mejor con distribuciones naturales."
         ),
     }
 
@@ -638,25 +588,20 @@ def reset_analysis_state() -> None:
     st.session_state.description_result = None
 
 
-<<<<<<< Updated upstream
 def render_upload_analysis_section() -> None:
     left, right = st.columns([1.1, 1], gap="large")
-=======
-def render_upload_section() -> None:
-    st.markdown(
-        '<div class="section-card"><div class="section-title">Carge la imagen en la sección a continuación para empezar con el análisis :)</div>',
-        unsafe_allow_html=True,
-    )
->>>>>>> Stashed changes
 
     with left:
-        st.markdown('<section class="card"><div class="card-title">Carga de Imagen</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<section class="card"><div class="card-title">Carga de Imagen</div>',
+            unsafe_allow_html=True,
+        )
         uploaded_file = st.file_uploader(
             "Arrastra y suelta una imagen PNG o selecciona un archivo",
             type=["png"],
             help="Solo PNG para mantener compatibilidad con el pipeline forense actual.",
         )
-        st.markdown('</section>', unsafe_allow_html=True)
+        st.markdown("</section>", unsafe_allow_html=True)
 
     if uploaded_file is None:
         with right:
@@ -667,21 +612,29 @@ def render_upload_section() -> None:
         return
 
     file_bytes = uploaded_file.getvalue()
-    if st.session_state.uploaded_name != uploaded_file.name or st.session_state.uploaded_bytes != file_bytes:
+    if (
+        st.session_state.uploaded_name != uploaded_file.name
+        or st.session_state.uploaded_bytes != file_bytes
+    ):
         st.session_state.uploaded_name = uploaded_file.name
         st.session_state.uploaded_bytes = file_bytes
         reset_analysis_state()
 
     with right:
-        st.markdown('<section class="card"><div class="card-title">Preview</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<section class="card"><div class="card-title">Preview</div>',
+            unsafe_allow_html=True,
+        )
         st.image(file_bytes, caption=uploaded_file.name, use_container_width=True)
-        st.markdown('</section>', unsafe_allow_html=True)
+        st.markdown("</section>", unsafe_allow_html=True)
 
     with left:
         st.markdown('<section class="card">', unsafe_allow_html=True)
-        st.markdown('<div class="card-title">Pipeline de Analisis</div>', unsafe_allow_html=True)
         st.markdown(
-<<<<<<< Updated upstream
+            '<div class="card-title">Pipeline de Analisis</div>',
+            unsafe_allow_html=True,
+        )
+        st.markdown(
             '<p class="small-muted">El sistema evaluara calidad, extraera caracteristicas forenses y emitira una clasificacion con explicacion.</p>',
             unsafe_allow_html=True,
         )
@@ -691,14 +644,14 @@ def render_upload_section() -> None:
             steps = [
                 "Validando calidad de imagen...",
                 "Extrayendo caracteristicas forenses...",
-                "Calculando metricas y comparando contra dataset...",
+                "Normalizando datos y consultando el modelo...",
                 "Generando resultado final...",
             ]
             try:
-                for i, msg in enumerate(steps, start=1):
-                    status.info(msg)
+                for i, message in enumerate(steps, start=1):
+                    status.info(message)
                     progress.progress(int((i - 1) / len(steps) * 100))
-                    time.sleep(0.18)
+                    time.sleep(0.12)
 
                 st.session_state.classification_result = run_inference(file_bytes)
                 st.session_state.description_result = None
@@ -708,31 +661,7 @@ def render_upload_section() -> None:
                 st.session_state.classification_result = None
                 progress.empty()
                 status.error(f"No fue posible analizar la imagen: {error}")
-        st.markdown('</section>', unsafe_allow_html=True)
-
-
-def render_quality_panel(result: dict[str, Any]) -> None:
-    quality = result.get("quality_metrics")
-    if not quality:
-        return
-
-    with st.expander("Calidad de imagen y nitidez"):
-        score = float(quality["sharpness_score"])
-        threshold = float(quality["threshold"])
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Sharpness Score", f"{score:.3f}")
-        c2.metric("Threshold", f"{threshold:.3f}")
-        c3.metric("Estado", "Apta" if quality["is_acceptable"] else "Insuficiente")
-        st.progress(min(100, max(0, int(score * 100))))
-
-        st.write(
-            {
-                "var_laplacian": round(float(quality["var_laplacian"]), 5),
-                "edge_energy": round(float(quality["edge_energy"]), 5),
-                "gradient_variance": round(float(quality["gradient_variance"]), 5),
-            }
-        )
-        st.caption("Threshold configurable por entorno con IA_SHARPNESS_THRESHOLD")
+        st.markdown("</section>", unsafe_allow_html=True)
 
 
 def render_explanation_panel(result: dict[str, Any]) -> None:
@@ -740,88 +669,44 @@ def render_explanation_panel(result: dict[str, Any]) -> None:
     if not rows:
         return
 
-    with st.expander("Mas informacion: por que se obtuvo este resultado"):
+    summary, insights = build_feature_summary(rows, int(result["label"]))
+    bbox = result.get("focus_bbox")
+    used_focus_crop = result.get("used_focus_crop", False)
+    with st.expander("Explicacion del resultado"):
         st.markdown(
-            '<p class="small-muted">Comparacion contra referencia REAL. Se muestran las caracteristicas con mayor desviacion.</p>',
-            unsafe_allow_html=True,
-        )
-
-        top_rows = rows[:5]
-        table = []
-        for row in top_rows:
-            table.append(
-                {
-                    "Caracteristica": row["feature"],
-                    "Valor imagen": row["value"],
-                    "Promedio REAL": row["real_mean"],
-                    "Rango REAL": f'{row["real_min"]:.4f} - {row["real_max"]:.4f}',
-                    "Estado": row["status"],
-                    "Z vs REAL": row["z_real"],
-                }
-            )
-
-        st.dataframe(table, use_container_width=True)
-
-        bar_data = {item["Caracteristica"]: abs(float(item["Z vs REAL"])) for item in table}
-        st.bar_chart(bar_data)
-
-        reasons = []
-        for row in top_rows:
-            if row["status"] == "Fuera de rango REAL":
-                reasons.append(
-                    f"- {row['feature']}: fuera del rango esperado REAL ({row['real_min']:.4f} a {row['real_max']:.4f})."
-                )
-            elif abs(row["z_real"]) >= 1.5:
-                reasons.append(
-                    f"- {row['feature']}: dentro de rango pero alejada del promedio REAL (z={row['z_real']:+.2f})."
-                )
-
-        if reasons:
-            st.markdown("**Lectura rapida**")
-            st.markdown("\n".join(reasons))
-        else:
-            st.success("Las principales caracteristicas caen en rangos compatibles con imagenes reales.")
-
-
-def render_forensic_metrics(result: dict[str, Any]) -> None:
-    feature_dict = result.get("feature_dict")
-    if not feature_dict:
-        return
-
-    st.markdown('<section class="card"><div class="card-title">Metricas Forenses Relevantes</div>', unsafe_allow_html=True)
-    cols = st.columns(4)
-    featured = [
-        ("Energia espectral", "spectral_energy"),
-        ("Simetria", "symmetry_score"),
-        ("Textura HF", "local_hf_variance"),
-        ("Entropia bloque", "entropy_block_var"),
-    ]
-    for idx, (label, key) in enumerate(featured):
-        cols[idx].metric(label, f"{float(feature_dict.get(key, 0.0)):.4f}")
-
-    st.caption("Estas metricas forman parte de las senales usadas por el clasificador para estimar autenticidad.")
-    st.markdown('</section>', unsafe_allow_html=True)
-=======
-            """
-            <div class="section-card">
-                <div class="section-title">Lista para analizar</div>
-                <p style="margin:0; line-height:1.7;">
-                    Presiona "Analizar imagen" para ejecutar el analisis forense.
-                </p>
+            f"""
+            <div class="insight-card">
+                <div class="insight-title">Lectura rapida</div>
+                <p class="insight-copy">{summary}</p>
             </div>
             """,
             unsafe_allow_html=True,
         )
-
-        if st.button("Analizar imagen", type="primary", use_container_width=True):
-            with st.spinner("Analizando imagen y ejecutando el clasificador..."):
-                try:
-                    st.session_state.classification_result = run_inference(file_bytes)
-                    st.session_state.description_result = None
-                except Exception as error:
-                    st.session_state.classification_result = None
-                    st.error(f"No fue posible analizar la imagen: {error}")
->>>>>>> Stashed changes
+        if insights:
+            items = "".join(f"<li>{item}</li>" for item in insights)
+            st.markdown(
+                f"""
+                <div class="insight-card">
+                    <div class="insight-title">Senales que mas influyeron</div>
+                    <ul class="insight-list">{items}</ul>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        if used_focus_crop and bbox:
+            left, top, right, bottom = bbox
+            st.markdown(
+                f"""
+                <div class="insight-card">
+                    <div class="insight-title">Region analizada</div>
+                    <p class="insight-copy">
+                        Para esta imagen se detecto una zona con mejor enfoque y el clasificador trabajo sobre esa region util.
+                        Area utilizada: {right - left} x {bottom - top} px.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 def render_result_section() -> None:
@@ -841,75 +726,36 @@ def render_result_section() -> None:
             unsafe_allow_html=True,
         )
         st.warning(result["message"])
-        render_quality_panel(result)
+        # render_quality_panel(result)
         return
 
     is_ai = result["label"] == 1
     status_class = "ai" if is_ai else "real"
     status_color = THEME["danger"] if is_ai else THEME["success"]
+    summary, _ = build_feature_summary(
+        result.get("feature_explanation", []),
+        int(result["label"]),
+    )
 
     st.markdown(
         f"""
-<<<<<<< Updated upstream
-        <section class="result {status_class}">
-            <div style="font-size:.82rem; text-transform:uppercase; opacity:.7;">Resultado Principal</div>
-            <div style="font-size:1.9rem; font-weight:800; color:{status_color}; margin:.2rem 0;">{result['label_text']}</div>
-            <div style="line-height:1.6;">{result['explanation']}</div>
+        <section class="result-hero {status_class}">
+            <div class="result-kicker">Resultado principal</div>
+            <div class="result-title" style="color:{status_color};">{result['label_text']}</div>
+            <p class="result-copy">{result['explanation']} {summary}</p>
+            <div class="result-badge">Modelo KNN · Analisis forense PNG</div>
         </section>
-=======
-        <div class="result-card {status_class}">
-            <div class="section-title">Resultado</div>
-            <div class="result-label">Clasificacion</div>
-            <div class="result-value" style="color:{status_color};">
-                {result["label_text"]}
-            </div>
-            <p class="result-help">{result["explanation"]}</p>
-        </div>
->>>>>>> Stashed changes
         """,
         unsafe_allow_html=True,
     )
-
-<<<<<<< Updated upstream
-    k1, k2, k3 = st.columns(3)
-    conf = result.get("confidence")
-    if conf is None:
-        k1.metric("Confianza", "N/A")
-    else:
-        k1.metric("Confianza", f"{conf * 100:.1f}%")
-    k2.metric("Muestras de entrenamiento", str(result["dataset_samples"]))
-    q = result.get("quality_metrics", {})
-    k3.metric("Sharpness", f"{float(q.get('sharpness_score', 0.0)):.3f}")
-
-    render_forensic_metrics(result)
-    render_quality_panel(result)
     render_explanation_panel(result)
 
     if st.button("Generar descripcion contextual", use_container_width=True):
         with st.spinner("Generando descripcion..."):
-=======
-    # if is_ai:
-    #     st.error("Se detectaron patrones compatibles con generacion sintetica.")
-    # else:
-    #     st.success("La imagen se alinea mejor con distribuciones naturales.")
-
-    metric_col, secondary_col = st.columns(2, gap="large")
-    with metric_col:
-        if confidence is not None:
-            st.metric("Confianza", f"{confidence * 100:.1f}%")
-            st.progress(int(confidence * 100))
-        else:
-            st.warning("No fue posible estimar una confianza con la implementacion actual.")
-
-    with secondary_col:
-        st.metric("Muestras de entrenamiento", str(result["dataset_samples"]))
-        st.caption("Análisis impulsado por un modelo de tipo KNN.")
-
-    if st.button("Generar descripcion", use_container_width=True):
-        with st.spinner("Generando descripcion contextual..."):
->>>>>>> Stashed changes
             try:
-                st.session_state.description_result = generate_description(st.session_state.uploaded_bytes)
+                st.session_state.description_result = generate_description(
+                    st.session_state.uploaded_bytes
+                )
             except Exception as error:
                 st.session_state.description_result = None
                 st.warning(f"No fue posible generar la descripcion: {error}")
@@ -921,24 +767,22 @@ def render_description_section() -> None:
         return
 
     description_text = description_result.get("description", "").strip()
-<<<<<<< Updated upstream
-    st.markdown('<section class="card"><div class="card-title">Descripcion Contextual</div>', unsafe_allow_html=True)
-=======
     st.markdown(
-        '<div class="section-card"><div class="section-title">Descripcion</div>',
+        '<section class="card"><div class="card-title">Descripcion Contextual</div>',
         unsafe_allow_html=True,
     )
-
->>>>>>> Stashed changes
     if description_text:
         st.write(description_text)
     else:
         st.warning("El modulo de descripcion no devolvio texto para esta imagen.")
-    st.markdown('</section>', unsafe_allow_html=True)
+    st.markdown("</section>", unsafe_allow_html=True)
 
 
 def render_info_section() -> None:
-    st.markdown('<section class="card"><div class="card-title">Como Funciona el Sistema</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<section class="card"><div class="card-title">Especificaciones del sistema</div>',
+        unsafe_allow_html=True,
+    )
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown(
@@ -958,14 +802,14 @@ def render_info_section() -> None:
             - La precision depende de la cobertura y calidad del dataset de referencia.
             """
         )
-    st.markdown('</section>', unsafe_allow_html=True)
+    st.markdown("</section>", unsafe_allow_html=True)
 
 
 def render_footer() -> None:
     st.markdown(
         """
         <section class="footer">
-            <strong>AI Image Authenticity Analyzer</strong> · Streamlit · Python · Forensia Digital · Machine Learning (KNN)<br/>
+            <strong>Sherlock IA</strong> · Streamlit · Python · Forensia Digital · Machine Learning (KNN)<br/>
             Enfoque academico y de investigacion aplicada en deteccion de contenido sintetico.
         </section>
         """,
@@ -975,15 +819,9 @@ def render_footer() -> None:
 
 def main() -> None:
     st.set_page_config(
-<<<<<<< Updated upstream
-        page_title="AI Image Authenticity Analyzer",
+        page_title="Sherlock IA",
         page_icon="AI",
         layout="wide",
-=======
-        page_title="Sherlock IA",
-        page_icon="🔎",
-        layout="centered",
->>>>>>> Stashed changes
     )
 
     initialize_state()
@@ -991,26 +829,10 @@ def main() -> None:
     render_hero()
 
     try:
-        with st.spinner("Cargando el modelo Sherlock-IA..."):
-            get_model_resources()
-<<<<<<< Updated upstream
-=======
-    except Exception as error:
-        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
-        return
-
-    try:
-        render_upload_section()
->>>>>>> Stashed changes
-    except Exception as error:
-        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
-        return
-
-    try:
-        with st.spinner("Cargando el modelo Sherlock-IA..."):
+        with st.spinner("Cargando el modelo Sherlock IA..."):
             get_model_resources()
     except Exception as error:
-        st.error(f"Ocurrió un problema al cargar el modelo: {error}")
+        st.error(f"Ocurrio un problema al cargar el modelo: {error}")
         return
 
     try:
@@ -1020,11 +842,7 @@ def main() -> None:
         return
 
     if st.session_state.uploaded_bytes is None:
-<<<<<<< Updated upstream
         st.info("Carga una imagen PNG para habilitar el analisis forense.")
-=======
-        st.warning("Nota: este modelo es únicamente de consulta y no tiene ninguna validez oficial")
->>>>>>> Stashed changes
 
     render_result_section()
     render_description_section()
