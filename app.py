@@ -44,19 +44,65 @@ FEATURE_DATASET_PATH = DEFAULT_FEATURE_CSV_PATH
 MODEL_ARTIFACT_PATH = DEFAULT_MODEL_PATH
 
 FEATURE_LABELS = {
-    "energy_to_variance_ratio": "Relacion energia/varianza",
-    "block_energy_variance": "Variacion de energia por bloques",
-    "spectral_energy": "Energia espectral",
-    "energia_diagonal_2da_derivada_norm": "Derivada diagonal normalizada",
-    "block_variance_mean": "Promedio de varianza por bloque",
-    "block_variance_var": "Variacion de varianza por bloque",
-    "symmetry_score": "Simetria global",
-    "local_hf_variance": "Variacion local de alta frecuencia",
-    "gradient_direction": "Consistencia de direccion de gradiente",
-    "entropy_block_var": "Variacion de entropia por bloque",
+    "energy_to_variance_ratio": "Microdetalle frente al contraste",
+    "block_energy_variance": "Distribucion del detalle",
+    "spectral_energy": "Textura general",
+    "energia_diagonal_2da_derivada_norm": "Cambios finos en bordes",
+    "block_variance_mean": "Contraste local",
+    "block_variance_var": "Regularidad entre zonas",
+    "symmetry_score": "Balance visual izquierda-derecha",
+    "local_hf_variance": "Detalle fino por regiones",
+    "gradient_direction": "Direccion de bordes",
+    "entropy_block_var": "Variedad de textura por zonas",
 }
 
 DEFAULT_SHARPNESS_THRESHOLD = float(os.getenv("IA_SHARPNESS_THRESHOLD", "0.42"))
+FULL_IMAGE_MIN_SHARPNESS = float(os.getenv("IA_FULL_IMAGE_MIN_SHARPNESS", "0.16"))
+FOCUS_CROP_MIN_GAIN = float(os.getenv("IA_FOCUS_CROP_MIN_GAIN", "0.12"))
+FOCUS_CROP_MIN_SCORE = float(os.getenv("IA_FOCUS_CROP_MIN_SCORE", "0.30"))
+
+FEATURE_COPY = {
+    "energy_to_variance_ratio": {
+        "low": "aparecio poco microdetalle en relacion con el contraste de la imagen",
+        "high": "aparecio mucho microdetalle en relacion con el contraste de la imagen",
+    },
+    "block_energy_variance": {
+        "low": "el detalle esta repartido de forma muy pareja",
+        "high": "el detalle se concentra de forma desigual entre zonas",
+    },
+    "spectral_energy": {
+        "low": "la textura general se ve mas suave de lo esperado",
+        "high": "la textura general se ve mas cargada de detalle fino",
+    },
+    "energia_diagonal_2da_derivada_norm": {
+        "low": "los bordes finos aparecen demasiado suaves",
+        "high": "los bordes finos aparecen demasiado marcados",
+    },
+    "block_variance_mean": {
+        "low": "varias zonas tienen poco contraste local",
+        "high": "varias zonas tienen contraste local alto",
+    },
+    "block_variance_var": {
+        "low": "las zonas mantienen un contraste bastante uniforme",
+        "high": "hay cambios fuertes de contraste entre zonas",
+    },
+    "symmetry_score": {
+        "low": "la composicion se ve mas balanceada de lo normal",
+        "high": "la composicion cambia bastante entre izquierda y derecha",
+    },
+    "local_hf_variance": {
+        "low": "hay poca variacion de detalle fino entre regiones",
+        "high": "hay mucha variacion de detalle fino entre regiones",
+    },
+    "gradient_direction": {
+        "low": "los bordes siguen direcciones muy consistentes",
+        "high": "los bordes cambian de direccion mas de lo esperado",
+    },
+    "entropy_block_var": {
+        "low": "la variedad de textura entre zonas es baja",
+        "high": "la variedad de textura entre zonas es alta",
+    },
+}
 
 THEME = {
     "navy": "#0b1f3a",
@@ -307,6 +353,21 @@ def inject_styles() -> None:
                 font-size: .92rem;
                 line-height: 1.6;
             }}
+            .pipeline-status {{
+                margin: .7rem 0 .55rem 0;
+                padding: .72rem .85rem;
+                border-radius: 12px;
+                border: 1px solid rgba(31,111,235,.22);
+                background: rgba(255,255,255,.96);
+                color: #111111;
+                font-weight: 700;
+                line-height: 1.45;
+            }}
+            .pipeline-status.success {{
+                border-color: rgba(31,143,85,.28);
+                background: rgba(31,143,85,.08);
+                color: #111111;
+            }}
             @media (max-width: 900px) {{
                 .stat-grid, .mini-stat-grid {{
                     grid-template-columns: 1fr;
@@ -314,6 +375,27 @@ def inject_styles() -> None:
                 .result-title {{
                     font-size: 1.6rem;
                 }}
+            }}
+            div.stButton > button {{
+                background-color: #363636;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                padding: 0.75rem 1.5rem;
+                font-size: 16px;
+                font-weight: 600;
+                transition: 0.3s;
+            }}
+
+            div.stButton > button:hover {{
+                background-color: #4f4f4f;
+                color: white;
+                border: none;
+            }}
+
+            div.stButton > button:active {{
+                background-color: #1e40af;
+                color: white;
             }}
         </style>
         """,
@@ -434,31 +516,34 @@ def build_feature_summary(
     top_rows = rows[:3]
     if predicted_label == 1:
         summary = (
-            "La decision se apoyó en variaciones locales y patrones de textura "
-            "menos consistentes con una captura natural."
+            "El modelo encontro una combinacion de textura, bordes y contraste "
+            "que se parece mas a imagenes sinteticas dentro de su referencia."
         )
     else:
         summary = (
-            "La decision se apoyó en una distribucion de textura y estructura "
-            "mas cercana al comportamiento esperado en imagenes naturales."
+            "El modelo encontro textura, bordes y contraste mas cercanos a "
+            "imagenes reales dentro de su referencia."
         )
 
     insights = []
     for row in top_rows:
         z_score = float(row["z_score"])
-        tendency = "por encima" if z_score >= 0 else "por debajo"
+        tendency = "high" if z_score >= 0 else "low"
         feature_name = str(row["feature"])
+        feature_key = str(row.get("feature_key", ""))
         magnitude = abs(z_score)
         if magnitude >= 2.0:
-            qualifier = "muy alejada"
+            qualifier = "fue una senal fuerte"
         elif magnitude >= 1.2:
-            qualifier = "moderadamente alejada"
+            qualifier = "tuvo peso moderado"
         else:
-            qualifier = "ligeramente alejada"
+            qualifier = "tuvo peso leve"
 
-        insights.append(
-            f"{feature_name}: {qualifier} del promedio del dataset ({tendency}, z={z_score:+.2f})."
+        copy = FEATURE_COPY.get(feature_key, {}).get(
+            tendency,
+            "se alejo de lo que suele verse en el conjunto de referencia",
         )
+        insights.append(f"{feature_name}: {qualifier}; {copy}.")
 
     return summary, insights
 
@@ -486,6 +571,24 @@ def select_analysis_image(image_bytes: bytes) -> dict[str, Any]:
         reader,
         config={"sharpness_threshold": DEFAULT_SHARPNESS_THRESHOLD},
     )
+
+    original_score = float(original_quality["sharpness_score"])
+    if original_quality["is_acceptable"] or original_score >= FULL_IMAGE_MIN_SHARPNESS:
+        selected_quality = dict(original_quality)
+        if not selected_quality["is_acceptable"]:
+            selected_quality["is_acceptable"] = True
+            selected_quality["acceptance_reason"] = "full_image_min_sharpness"
+        return {
+            "reader": reader,
+            "image_bytes": image_bytes,
+            "quality": selected_quality,
+            "original_quality": original_quality,
+            "focused_quality": None,
+            "used_focus_crop": False,
+            "focus_bbox": None,
+            "region_status": "full_image",
+        }
+
     focus_bbox = suggest_focus_crop_box(reader, crop_width_blocks=10, crop_height_blocks=10)
 
     if focus_bbox is None:
@@ -493,8 +596,11 @@ def select_analysis_image(image_bytes: bytes) -> dict[str, Any]:
             "reader": reader,
             "image_bytes": image_bytes,
             "quality": original_quality,
+            "original_quality": original_quality,
+            "focused_quality": None,
             "used_focus_crop": False,
             "focus_bbox": None,
+            "region_status": "full_image",
         }
 
     focused_bytes = crop_png_bytes(image_bytes, focus_bbox)
@@ -504,11 +610,16 @@ def select_analysis_image(image_bytes: bytes) -> dict[str, Any]:
         config={"sharpness_threshold": DEFAULT_SHARPNESS_THRESHOLD},
     )
 
-    original_score = float(original_quality["sharpness_score"])
     focused_score = float(focused_quality["sharpness_score"])
+    focused_local_score = float(focused_quality.get("local_focus_score", 0.0))
+    focused_is_useful = (
+        focused_quality["is_acceptable"]
+        or focused_score >= FOCUS_CROP_MIN_SCORE
+        or focused_local_score >= 0.45
+    )
     use_focus_crop = (
-        not original_quality["is_acceptable"] or
-        focused_quality["is_acceptable"] and focused_score >= original_score + 0.06
+        focused_is_useful
+        and focused_score >= original_score + FOCUS_CROP_MIN_GAIN
     )
 
     if use_focus_crop:
@@ -516,16 +627,22 @@ def select_analysis_image(image_bytes: bytes) -> dict[str, Any]:
             "reader": focused_reader,
             "image_bytes": focused_bytes,
             "quality": focused_quality,
+            "original_quality": original_quality,
+            "focused_quality": focused_quality,
             "used_focus_crop": True,
             "focus_bbox": focus_bbox,
+            "region_status": "focus_crop",
         }
 
     return {
         "reader": reader,
         "image_bytes": image_bytes,
         "quality": original_quality,
+        "original_quality": original_quality,
+        "focused_quality": focused_quality,
         "used_focus_crop": False,
-        "focus_bbox": focus_bbox,
+        "focus_bbox": None,
+        "region_status": "full_image",
     }
 
 
@@ -539,6 +656,11 @@ def run_inference(image_bytes: bytes) -> dict[str, Any]:
         return {
             "rejected_by_quality": True,
             "quality_metrics": quality,
+            "original_quality_metrics": analysis_input.get("original_quality"),
+            "focused_quality_metrics": analysis_input.get("focused_quality"),
+            "used_focus_crop": analysis_input["used_focus_crop"],
+            "focus_bbox": analysis_input["focus_bbox"],
+            "region_status": analysis_input["region_status"],
             "message": (
                 "Imagen demasiado desenfocada para ejecutar el analisis forense. "
                 "No contiene suficiente informacion visual para una decision confiable."
@@ -566,9 +688,12 @@ def run_inference(image_bytes: bytes) -> dict[str, Any]:
         "feature_dict": feature_dict,
         "dataset_samples": resources["samples"],
         "quality_metrics": quality,
+        "original_quality_metrics": analysis_input.get("original_quality"),
+        "focused_quality_metrics": analysis_input.get("focused_quality"),
         "feature_explanation": explanation_rows,
         "used_focus_crop": analysis_input["used_focus_crop"],
         "focus_bbox": analysis_input["focus_bbox"],
+        "region_status": analysis_input["region_status"],
         "explanation": (
             "Patrones compatibles con generacion sintetica detectados."
             if prediction == 1
@@ -649,14 +774,20 @@ def render_upload_analysis_section() -> None:
             ]
             try:
                 for i, message in enumerate(steps, start=1):
-                    status.info(message)
+                    status.markdown(
+                        f'<div class="pipeline-status">{message}</div>',
+                        unsafe_allow_html=True,
+                    )
                     progress.progress(int((i - 1) / len(steps) * 100))
                     time.sleep(0.12)
 
                 st.session_state.classification_result = run_inference(file_bytes)
                 st.session_state.description_result = None
                 progress.progress(100)
-                status.success("Analisis completado.")
+                status.markdown(
+                    '<div class="pipeline-status success">Analisis completado.</div>',
+                    unsafe_allow_html=True,
+                )
             except Exception as error:
                 st.session_state.classification_result = None
                 progress.empty()
@@ -700,8 +831,20 @@ def render_explanation_panel(result: dict[str, Any]) -> None:
                 <div class="insight-card">
                     <div class="insight-title">Region analizada</div>
                     <p class="insight-copy">
-                        Para esta imagen se detecto una zona con mejor enfoque y el clasificador trabajo sobre esa region util.
+                        La imagen completa tenia zonas con poco detalle util. Se encontro una region mas nitida y el clasificador trabajo sobre esa parte.
                         Area utilizada: {right - left} x {bottom - top} px.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                """
+                <div class="insight-card">
+                    <div class="insight-title">Region analizada</div>
+                    <p class="insight-copy">
+                        La imagen tenia suficiente informacion visual para analizarse completa. No se aplico recorte por enfoque.
                     </p>
                 </div>
                 """,
